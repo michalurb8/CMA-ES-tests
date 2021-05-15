@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 class CMAES:
 
     def __init__(self, objective_function: str, dimensions: int):
-        # self._fitness = 'quadratic'
-        # self._dimension = 1
-        self._fitness = objective_function
-        self._dimension = dimensions
+        self._fitness = 'quadratic'
+        self._dimension = 2
+        # self._fitness = objective_function
+        # self._dimension = dimensions
         # Initial point
         self._xmean = np.random.rand(self._dimension)[:, np.newaxis]
         self._zmean = None
         # Step size
-        self._sigma = 0.5
+        self._sigma = 0.05
         self._stop_value = 1e-10
         self._stop_after = 1e3 * self._dimension ** 2
 
@@ -29,9 +29,10 @@ class CMAES:
         # Population size
         self._lambda = int(4 + np.floor(3 * np.log(self._dimension)))
         # Number of parents/points for recombination
-        self._mu = int(self._lambda / 2)
+        self._mu = self._lambda // 2
         # Recombination weights
         self._weights = np.log(self._mu + 0.5) - np.log(np.arange(1, self._mu + 1))
+        # self._weights = np.ones(self._mu)
         # Normalize weights
         self._weights = self._weights / sum(self._weights)
         # Variance effective number of parents
@@ -81,15 +82,15 @@ class CMAES:
         #       f'_chi: {self._chi}\n')
 
     def _get_time_constant(self):
-        return (4 + self._mu_effective / self._dimension) / (
-                4 + self._dimension + 2 * self._mu_effective / self._dimension)
+        return ((4 + self._mu_effective / self._dimension) /
+                (4 + self._dimension + 2 * self._mu_effective / self._dimension))
 
     def _get_c_learning_rate(self):
         return 2 / ((self._dimension + 1.3) ** 2 + self._mu_effective)
 
     def _get_mu_learning_rate(self):
-        return 2 * (self._mu_effective - 2 + 1 / self._mu_effective) / (
-                (self._dimension + 2) ** 2 + 2 * self._mu_effective / 2)
+        return (2 * (self._mu_effective - 2 + 1 / self._mu_effective) /
+                ((self._dimension + 2) ** 2 + 2 * self._mu_effective / 2))
 
     def _get_sigma_damping(self):
         return 1 + 2 * max(0, np.sqrt((self._mu_effective - 1) / (self._dimension + 1)) - 1) + self._time_sigma
@@ -99,9 +100,8 @@ class CMAES:
         arx, indices, arfitness = None, None, None
         results = []
         while count_it < self._stop_after:
-            arz = np.array(generate_random_matrix(self._dimension, self._lambda))
-            arx = np.array(self._get_mutation(arz))
-            arfitness = np.array([self._objective(x) for x in arx.T])
+            arfitness, arx, arz = self._generate_offspring()
+            count_it += self._lambda
 
             # print(f'arz: {arz}\n')
             # print(f'arz.shape: {arz.shape}\n')
@@ -109,42 +109,41 @@ class CMAES:
             # print(f'arx.shape: {arx.shape}\n')
             # print(f'arfit: {arfitness}')
 
-            count_it += self._lambda
-
             indices = arfitness.argsort(axis=0).flatten()
             arfitness = arfitness[indices]
 
-            self._xmean = np.matmul(arx[:, indices[range(self._mu)]], self._weights)
-            arz_mu = arz[:, indices[range(self._mu)]]
-            self._zmean = np.matmul(arz_mu, self._weights)
+            self._recalculate_mean(arx, arz, indices)
 
             # print(f'self._xmean: {self._xmean}\n')
             # print(f'self._zmean: {self._zmean}\n')
 
-            ps_delta = np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu_effective) * np.matmul(self._B,
-                                                                                                           self._zmean)
+            # Update evolution paths for C and sigma
+            ps_delta = (np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu_effective) *
+                        np.matmul(self._B, self._zmean))
             self._path_sigma = (1 - self._time_sigma) * self._path_sigma + ps_delta
 
             # print(f'self._ps: {self._ps}\n')
 
-            hsig = int(np.linalg.norm(self._path_sigma) / np.sqrt(
-                1 - np.power((1 - self._time_sigma), (2 * count_it / self._lambda))) / self._chi < 1.4 + 2 / (
-                               self._dimension + 1))
+            # Heaviside function
+            h_sigma = int(np.linalg.norm(self._path_sigma) /
+                          np.sqrt(1 - np.power(1 - self._time_sigma, 2 * count_it / self._lambda)) / self._chi
+                          < 1.4 + 2 / (self._dimension + 1))
 
-            # print(f'hsig: {hsig}\n')
+            # print(f'h_sigma: {h_sigma}\n')
 
-            self._path_c = (1 - self._time_c) * self._path_c + hsig * np.sqrt(
-                self._time_c * (2 - self._time_c) * self._mu_effective) * (
-                               np.matmul(np.matmul(self._B, self._D), self._zmean))
+            self._path_c = ((1 - self._time_c) * self._path_c +
+                            h_sigma * np.sqrt(self._time_c * (2 - self._time_c) * self._mu_effective) *
+                            (np.matmul(np.matmul(self._B, self._D), self._zmean)))
 
             # print(f'self._pc: {self._pc}\n')
 
-            mut_mat = np.matmul(np.matmul(self._B, self._D), arz_mu)
-            self._C = (1 - self._lr_c - self._lr_mu) * self._C \
-                      + self._lr_c * (np.matmul(self._path_c, np.transpose(self._path_c))
-                                      + (1 - hsig) * self._time_c * (2 - self._time_c) * self._C) \
-                      + self._lr_mu \
-                      * np.matmul(np.matmul(mut_mat, np.diag(self._weights.flatten())), np.transpose(mut_mat))
+            # Update covariance matrix
+            mut_mat = np.matmul(np.matmul(self._B, self._D), arz[:, indices[range(self._mu)]])
+            self._C = ((1 - self._lr_c - self._lr_mu) * self._C +
+                       self._lr_c * (np.matmul(self._path_c, np.transpose(self._path_c))
+                                     + (1 - h_sigma) * self._time_c * (2 - self._time_c) * self._C) +
+                       self._lr_mu * np.matmul(np.matmul(mut_mat, np.diag(self._weights.flatten())),
+                                               np.transpose(mut_mat)))
 
             # print(f'self._C: {self._C}\n')
             # print(f'self._C.shape: {self._C.shape}\n')
@@ -189,11 +188,20 @@ class CMAES:
         plt.grid()
         plt.show()
 
+    def _recalculate_mean(self, arx, arz, indices):
+        self._xmean = np.matmul(arx[:, indices[range(self._mu)]], self._weights)
+        self._zmean = np.matmul(arz[:, indices[range(self._mu)]], self._weights)
+
+    def _generate_offspring(self):
+        arz = np.array(generate_random_matrix(self._dimension, self._lambda))
+        arx = np.array(self._get_mutation(arz))
+        arfitness = np.array([self._objective(x) for x in arx.T])
+        return arfitness, arx, arz
+
     def _get_mutation(self, random_matrix):
-        result = np.empty((self._dimension, self._lambda))
+        result = self._sigma * np.matmul(np.matmul(self._B, self._D), random_matrix)
         for k in range(self._lambda):
-            result[:, k] = self._xmean.flatten() + self._sigma * (
-                np.matmul(np.matmul(self._B, self._D), random_matrix[:, k]))
+            result[:, k] += self._xmean.flatten()
         return result
 
     def _objective(self, x):
@@ -201,7 +209,7 @@ class CMAES:
             assert self._dimension > 1, 'Dimension must be greater than 1.'
             return felli(x)
         elif self._fitness == 'quadratic':
-            assert self._dimension == 1, 'Invalid dimension for quadratic function.'
+            # assert self._dimension == 1, 'Invalid dimension for quadratic function.'
             return quadratic(x)
         raise Exception('Invalid objective function chosen')
 
@@ -217,5 +225,6 @@ def felli(x: np.ndarray):
 
 
 def quadratic(arr: np.ndarray):
-    return [x ** 2 for x in arr]
+    # return [x ** 2 for x in arr]
+    return arr[0] ** 2 + arr[1] ** 2
     # return [-3 * x ** 2 + 4.5 * x + 7 for x in arr]
