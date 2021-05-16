@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 
 from cmaes import CMAES
 
@@ -29,5 +30,3 @@ if __name__ == '__main__':
 
     algo = CMAES(args.function, args.dimensions)
     algo.generation_loop()
-
-
