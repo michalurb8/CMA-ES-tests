@@ -1,5 +1,4 @@
 import numpy as np
-import math
 import matplotlib.pyplot as plt
 
 from typing import List
@@ -12,9 +11,11 @@ _SIGMA_MAX = 1e32
 
 class CMAES:
 
-    def __init__(self, objective_function: str, dimensions: int):
+    def __init__(self, objective_function: str, dimensions: int, mode: str, modification_every: int):
         self._fitness = objective_function
         self._dimension = dimensions
+        self._mode = mode
+        self._modification_every = modification_every
         # Initial point
         self._xmean = np.random.rand(self._dimension)
         # Step size
@@ -133,7 +134,10 @@ class CMAES:
         y_k = (population - self._xmean) / self._sigma
 
         # Selection and recombination
-        y_w = np.sum(y_k[: self._mu].T * self._weights[: self._mu], axis=1)
+        selected = y_k[: self._mu]
+        if self._mode == 'mean' and self._generation % self._modification_every == 0:
+            selected[self._mu - 1] = np.mean(y_k)
+        y_w = np.sum(selected.T * self._weights[: self._mu], axis=1)
         self._xmean += self._sigma * y_w
 
         # Step-size control
