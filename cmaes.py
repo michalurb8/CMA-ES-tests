@@ -2,11 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-from typing import Any
-from typing import cast
-from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 _EPS = 1e-8
@@ -17,24 +13,14 @@ _SIGMA_MAX = 1e32
 class CMAES:
 
     def __init__(self, objective_function: str, dimensions: int):
-        # self._fitness = 'quadratic'
-        # self._dimension = 2
         self._fitness = objective_function
         self._dimension = dimensions
         # Initial point
         self._xmean = np.random.rand(self._dimension)
-        self._zmean = None
         # Step size
         self._sigma = 0.05
         self._stop_value = 1e-10
         self._stop_after = 1000 * self._dimension ** 2
-
-        print(f'Dimension: {self._dimension}\n'
-              f'_fitness: {self._fitness}\n'
-              f'Xmean: {self._xmean}\n'
-              f'Sigma: {self._sigma}\n'
-              f'stop_value: {self._stop_value}\n'
-              f'stop_after: {self._stop_after}\n')
 
         # Set up selection
         # Population size
@@ -73,27 +59,16 @@ class CMAES:
         self._time_c = ((4 + self._mu_effective / self._dimension) /
                         (4 + self._dimension + 2 * self._mu_effective / self._dimension))
 
-        print(f'Lambda: {self._lambda}\n'
-              f'Mu: {self._mu}\n'
-              f'weights: {self._weights}\n'
-              f'_mu_effective: {self._mu_effective}\n')
-
         # E||N(0, I)||
         self._chi = np.sqrt(self._dimension) * (1 - 1 / (4 * self._dimension) + 1 / (21 * self._dimension ** 2))
-
-        # print(f'_time_c: {self._time_c}\n'
-        #       f'_cs: {self._time_sigma}\n'
-        #       f'_lr_c: {self._lr_c}\n'
-        #       f'_lr_mu: {self._lr_mu}\n'
-        #       f'_damp: {self._damping}\n')
 
         # Evolution paths
         self._path_c = np.zeros(self._dimension)
         self._path_sigma = np.zeros(self._dimension)
         # B defines coordinate system
-        self._B: Optional[np.ndarray] = None
+        self._B = None
         # D defines scaling (diagonal matrix)
-        self._D: Optional[np.ndarray] = None
+        self._D = None
         # Covariance matrix
         self._C = np.eye(self._dimension)
 
@@ -108,14 +83,6 @@ class CMAES:
         self._tolxup = 1e4
         self._tolfun = 1e-12
         self._tolconditioncov = 1e14
-
-        # print(f'_path_c: {self._path_c}\n'
-        #       f'_ps: {self._path_sigma}\n'
-        #       f'_B: {self._B}\n'
-        #       f'_D: {self._D}\n'
-        #       f'_C: {self._C}\n'
-        #       f'_eigen_eval: {self._eigen_eval}\n'
-        #       f'_chi: {self._chi}\n')
 
     def generation_loop(self):
         results = []
@@ -135,41 +102,20 @@ class CMAES:
             self.tell(solutions)
             results.append([x[1] for x in solutions])
 
-        # plot_result(results)
+        plot_result(results)
 
     def _sample_solution(self) -> np.ndarray:
-        B, D = self._eigen_decomposition()
+        self._B, self._D = self._eigen_decomposition()
         arz = np.random.standard_normal(self._dimension)
-        return self._xmean + self._sigma * np.matmul(np.matmul(B, np.diag(D)), arz)
+        return self._xmean + self._sigma * np.matmul(np.matmul(self._B, np.diag(self._D)), arz)
 
     def _eigen_decomposition(self) -> Tuple[np.ndarray, np.ndarray]:
-        # if self._B is not None and self._D is not None:
-        #     return self._B, self._D
-
         self._C = (self._C + self._C.T) / 2
         D2, B = np.linalg.eigh(self._C)
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
         self._C = np.dot(np.dot(B, np.diag(D ** 2)), B.T)
 
-        self._B, self._D = B, D
         return B, D
-
-    def _is_feasible(self, param: np.ndarray) -> bool:
-        if self._bounds is None:
-            return True
-        return cast(
-            bool,
-            np.all(param >= self._bounds[:, 0]) and np.all(param <= self._bounds[:, 1]),
-        )  # Cast bool_ to bool.
-
-    def _repair_infeasible_params(self, param: np.ndarray) -> np.ndarray:
-        if self._bounds is None:
-            return param
-
-        # clip with lower and upper bound.
-        param = np.where(param < self._bounds[:, 0], self._bounds[:, 0], param)
-        param = np.where(param > self._bounds[:, 1], self._bounds[:, 1], param)
-        return param
 
     def tell(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
         assert len(solutions) == self._lambda, "Must evaluate solutions with length equal to population size."
