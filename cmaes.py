@@ -142,7 +142,7 @@ class CMAES:
 
         # Step-size control
         # C^(-1/2) = B D^(-1) B^T
-        C_2 = np.matmul(np.matmul(self._B, np.diag(1 / self._D)), self._B.T)
+        C_2 = np.matmul(np.matmul(self._B, np.diag(1 / (self._D + _EPS))), self._B.T)
 
         ps_delta = (np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu_effective) *
                     np.matmul(C_2, y_w))
