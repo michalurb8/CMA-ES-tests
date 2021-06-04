@@ -2,7 +2,8 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from cmaes import CMAES
+# from cmaes import CMAES
+from cmaes2 import CMAES
 
 parser = argparse.ArgumentParser(prog="CMA-ES",
                                  description='This program allows you to run CMA-ES')
@@ -17,7 +18,7 @@ parser.add_argument('-fr', '--frequency', type=int, default=1,
 
 parser.add_argument('-f', '--function', type=str, default='felli',
                     help='Objective function for the algorithm.',
-                    choices=['felli', 'quadratic'])
+                    choices=['felli', 'quadratic', 'bent', 'rastrigin', 'rosenbrock'])
 
 parser.add_argument('-d', '--dimensions', type=int, default=10,
                     help='Number of dimensions.')
