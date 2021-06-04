@@ -136,7 +136,7 @@ class CMAES:
         # Selection and recombination
         selected = y_k[: self._mu]
         if self._mode == 'mean' and self._generation % self._modification_every == 0:
-            selected[self._mu - 1] = np.mean(y_k)
+            selected[self._mu - 1] = np.mean(y_k, axis=0)
         y_w = np.sum(selected.T * self._weights[: self._mu], axis=1)
         self._xmean += self._sigma * y_w
 
