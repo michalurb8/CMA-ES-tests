@@ -188,6 +188,15 @@ class CMAES:
         elif self._fitness == 'quadratic':
             assert self._dimension == 2, 'Invalid dimension for quadratic function.'
             return quadratic(x)
+        elif self._fitness == 'bent':
+            assert self._dimension > 1, 'Dimension must be greater than 1.'
+            return bent_cigar(x)
+        elif self._fitness == 'rastrigin':
+            assert self._dimension > 1, 'Dimension must be greater than 1.'
+            return rastrigin(x)
+        elif self._fitness == 'rosenbrock':
+            assert self._dimension > 1, 'Dimension must be greater than 1.'
+            return rosenbrock(x)
         raise Exception('Invalid objective function chosen')
 
 
@@ -210,6 +219,14 @@ def felli(x: np.ndarray):
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
     return np.matmul(arr, x ** 2)
 
-
 def quadratic(x: np.ndarray):
     return (x[0] - 3) ** 2 + (10 * (x[1] + 2)) ** 2
+
+def bent_cigar(x: np.ndarray) -> float:
+    return x[0]**2 + 1e6*np.sum(x[1:]**2)
+
+def rastrigin(x: np.ndarray) -> float:
+    return np.sum(x**2 + -10*(np.cos(2*np.pi*x)) + 10)
+
+def rosenbrock(x: np.ndarray) -> float:
+    return sum([100*(x[i]**2 - x[i+1])**2 + (x[i]-1)**2 for i in range(x.shape[0]-1)])
