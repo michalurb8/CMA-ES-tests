@@ -19,13 +19,13 @@ class CMAES:
         # Initial point
         self._xmean = np.random.rand(self._dimension)
         # Step size
-        self._sigma = 1
+        self._sigma = 10
         self._stop_value = 1e-10
         self._stop_after = 1000 * self._dimension ** 2
 
         # Set up selection
         # Population size
-        self._lambda = int(4 + np.floor(3 * np.log(self._dimension)))
+        self._lambda = 2*int(4 + np.floor(3 * np.log(self._dimension)))
         # Number of parents/points for recombination
         self._mu = self._lambda // 2
 
@@ -120,7 +120,7 @@ class CMAES:
 
         # Step-size control
         # C^(-1/2) = B D^(-1) B^T
-        C_2 = np.matmul(np.matmul(self._B, np.diag(1 / self._D)), self._B.T)
+        C_2 = np.matmul(np.matmul(self._B, np.diag(1 / (self._D + _EPS))), self._B.T)
 
         ps_delta = (np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu) *
                     np.matmul(C_2, y_w))
@@ -144,12 +144,17 @@ class CMAES:
         )
 
     def objective(self, x):
+        assert self._dimension > 1, 'Dimension must be greater than 1.'
         if self._fitness == 'felli':
-            assert self._dimension > 1, 'Dimension must be greater than 1.'
             return felli(x)
         elif self._fitness == 'quadratic':
-            assert self._dimension > 1, 'Dimension must be greater than 1.'
             return quadratic(x)
+        elif self._fitness == 'bent':
+            return bent_cigar(x)
+        elif self._fitness == 'rastrigin':
+            return rastrigin(x)
+        elif self._fitness == 'rosenbrock':
+            return rosenbrock(x)
         raise Exception('Invalid objective function chosen')
 
 
@@ -162,16 +167,23 @@ def plot_result(results):
     plt.plot(x_axis, results)
     plt.xlabel('Timestep')
     plt.ylabel('Obj fun')
+    plt.yscale('log')
     plt.grid()
     plt.show()
 
-def generate_random_matrix(x, y):
-    return [np.random.rand(y) for _ in range(x)]
-
-def felli(x: np.ndarray):
+def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
-    return np.matmul(arr, x ** 2)
+    return np.dot(arr, x**2)
 
-def quadratic(x: np.ndarray):
+def quadratic(x: np.ndarray) -> float:
     return np.dot(x,x)
+
+def bent_cigar(x: np.ndarray) -> float:
+    return x[0]**2 + 1e6*np.sum(x[1:]**2)
+
+def rastrigin(x: np.ndarray) -> float:
+    return np.sum(x**2 + -10*(np.cos(2*np.pi*x)) + 10)
+
+def rosenbrock(x: np.ndarray) -> float:
+    return sum([100*(x[i]**2 - x[i+1])**2 + (x[i]-1)**2 for i in range(x.shape[0]-1)])
