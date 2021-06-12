@@ -7,6 +7,7 @@ from typing import Tuple
 _EPS = 1e-8
 _MEAN_MAX = 1e32
 _SIGMA_MAX = 1e32
+_TARGETS = np.array([10**i for i in range(-10, 10)])
 
 
 class CMAES:
@@ -16,6 +17,9 @@ class CMAES:
         self._dimension = dimensions
         self._mode = mode
         self._modification_every = modification_every
+        self._set_initial_params()
+    
+    def _set_initial_params(self):
         # Initial point
         self._xmean = np.random.rand(self._dimension)
         # Step size
@@ -25,7 +29,7 @@ class CMAES:
 
         # Set up selection
         # Population size
-        self._lambda = 2*int(4 + np.floor(3 * np.log(self._dimension)))
+        self._lambda = int(4 + np.floor(3 * np.log(self._dimension)))
         # Number of parents/points for recombination
         self._mu = self._lambda // 2
 
@@ -57,29 +61,37 @@ class CMAES:
         # Parameter for B and D update timing
         self._generation = 0
 
+        #store best found value so far
+        self._best_value = float('inf')
+        self.results = []
+
+
     def generation_loop(self):
-        results = []
-        value = 1e32
+        value = float('inf')
+        self.results = []
         for count_it in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
             solutions = []
+            value_break_condition = False
             for _ in range(self._lambda):
                 # Ask a parameter
                 x = self._sample_solution()
 
-                value = self.objective(x)
+                value = self._objective(x)
+                self._best_value = min(value, self._best_value)
+
                 solutions.append((x, value))
-                print(f"#{count_it} {value} (x1={x[0]}, x2 = {x[1]})")
-            if value < self._stop_value:
-                print("Stop value found!")
+                if value < self._stop_value:
+                    value_break_condition = True
+                    self.results.append((count_it, self._best_value))
+                    break
+            if value_break_condition == True:
                 break
             # Tell evaluation values.
             self.tell(solutions)
-            results.append([x[1] for x in solutions])
+            self.results.append((count_it, self._best_value))
         else:
             print("Iteration limit reached.")
-
-        plot_result(results)
 
     def _sample_solution(self) -> np.ndarray:
         standard_point = np.random.standard_normal(self._dimension) # ~N(0,I)
@@ -143,7 +155,7 @@ class CMAES:
                 + self._lr_c_mu * rank_mu
         )
 
-    def objective(self, x):
+    def _objective(self, x):
         assert self._dimension > 1, 'Dimension must be greater than 1.'
         if self._fitness == 'felli':
             return felli(x)
@@ -157,19 +169,52 @@ class CMAES:
             return rosenbrock(x)
         raise Exception('Invalid objective function chosen')
 
+    def plot_result(self):
+        if self.results == []:
+            raise Exception("Can't plot results, must run the algorithm first")
+        x_axis = [iter for (iter, _) in self.results]
+        y_axis = [value for (_, value) in self.results]
+        plt.scatter(x_axis, y_axis)
+        plt.xlabel('Timestep')
+        plt.ylabel('Obj fun')
+        plt.yscale('log')
+        plt.grid()
+        plt.show()
+    
+    def ecdf(self, targets: np.array):
+        if self.results == []:
+            raise Exception("Can't calculate ECDF, must run the algorithm first")
+        ecdf = []
+        for result in self.results:
+            passed = 0
+            for target in targets:
+                if result[1] <= target:
+                    passed += 1
+            ecdf.append(passed/len(targets))
+        missing_entries = self._stop_after - len(ecdf)
+        if missing_entries > 0:
+            ecdf.extend([1.]*missing_entries)
+        return np.array(ecdf)
+    
+    def evaluate(self, iterations: int):
+        ecdf_list = []
+        for _ in range(iterations): #run algorithm many times, store results
+            self._set_initial_params()
+            self.generation_loop()
+            ecdf_list.append(self.ecdf(_TARGETS))
+        result_length = max([len(ecdf) for ecdf in ecdf_list])
+        for ecdf in ecdf_list: #fill ecdf data so that all lists are of equal lengths
+            missing_entries = result_length - len(ecdf)
+            if missing_entries > 0:
+                ecdf = np.append(ecdf, np.ones(missing_entries))
+        ecdf_array = np.vstack(ecdf_list)
+        result = np.mean(ecdf_array, axis = 0)
+        print(result)
+        return result
 
 
 
-
-def plot_result(results):
-    results = [np.max(list) for list in results]
-    x_axis = np.arange(len(results))
-    plt.plot(x_axis, results)
-    plt.xlabel('Timestep')
-    plt.ylabel('Obj fun')
-    plt.yscale('log')
-    plt.grid()
-    plt.show()
+        
 
 def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
