@@ -7,8 +7,6 @@ from typing import Tuple
 _EPS = 1e-8
 _MEAN_MAX = 1e32
 _SIGMA_MAX = 1e32
-_TARGETS = np.array([10**i for i in range(-10, 10)])
-
 
 class CMAES:
 
@@ -17,19 +15,17 @@ class CMAES:
         self._dimension = dimensions
         self._mode = mode
         self._modification_every = modification_every
-        self._set_initial_params()
-    
-    def _set_initial_params(self):
+
         # Initial point
-        self._xmean = np.random.rand(self._dimension)
+        self._xmean = 15*np.random.rand(self._dimension)
         # Step size
         self._sigma = 10
         self._stop_value = 1e-10
-        self._stop_after = 1000 * self._dimension ** 2
+        self._stop_after = 100 * self._dimension ** 2
 
         # Set up selection
         # Population size
-        self._lambda = int(4 + np.floor(3 * np.log(self._dimension)))
+        self._lambda = 2*int(4 + np.floor(3 * np.log(self._dimension)))
         # Number of parents/points for recombination
         self._mu = self._lambda // 2
 
@@ -94,12 +90,8 @@ class CMAES:
             print("Iteration limit reached.")
 
     def _sample_solution(self) -> np.ndarray:
-        standard_point = np.random.standard_normal(self._dimension) # ~N(0,I)
-        scaled_point = np.matmul(np.diag(self._D), standard_point) # ~N(0,D)
-        rotated_point = np.matmul(self._B, scaled_point) # ~N(0,C)
-        step_point = self._sigma*rotated_point # ~N(0,σ^2*C)
-        moved_point = self._xmean + step_point # ~N(m, σ^2*C)
-        return moved_point # ~N(m, σ^2*C)
+        arz = np.random.standard_normal(self._dimension)
+        return self._xmean + self._sigma * np.matmul(np.matmul(self._B, np.diag(self._D)), arz)
 
     def _eigen_decomposition(self) -> Tuple[np.ndarray, np.ndarray]:
         # self._C = (self._C + self._C.T) / 2 # WHY
@@ -120,6 +112,7 @@ class CMAES:
 
         # ~ N(m, σ^2 C)
         population = np.array([s[0] for s in solutions])
+
         # ~ N(0, C)
         y_k = (population - self._xmean) / self._sigma
 
@@ -191,30 +184,11 @@ class CMAES:
                 if result[1] <= target:
                     passed += 1
             ecdf.append(passed/len(targets))
-        missing_entries = self._stop_after - len(ecdf)
-        if missing_entries > 0:
-            ecdf.extend([1.]*missing_entries)
-        return np.array(ecdf)
-    
-    def evaluate(self, iterations: int):
-        ecdf_list = []
-        for _ in range(iterations): #run algorithm many times, store results
-            self._set_initial_params()
-            self.generation_loop()
-            ecdf_list.append(self.ecdf(_TARGETS))
-        result_length = max([len(ecdf) for ecdf in ecdf_list])
-        for ecdf in ecdf_list: #fill ecdf data so that all lists are of equal lengths
-            missing_entries = result_length - len(ecdf)
-            if missing_entries > 0:
-                ecdf = np.append(ecdf, np.ones(missing_entries))
-        ecdf_array = np.vstack(ecdf_list)
-        result = np.mean(ecdf_array, axis = 0)
-        print(result)
-        return result
+        return ecdf
 
 
 
-        
+
 
 def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
