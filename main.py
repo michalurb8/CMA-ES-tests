@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser(prog="CMA-ES",
 
 parser.add_argument('-m', '--mode', type=str, default='normal',
                     help='Program mode.',
-                    choices=['normal', 'mean', 'mean2'])
+                    choices=['normal', 'mean_all', 'mean_selected'])
 
 parser.add_argument('-fr', '--frequency', type=int, default=1,
                     help='How many iteration apart should modification of the algorithm take place.'
@@ -25,4 +25,4 @@ def print_mode(mode):
 
 
 if __name__ == '__main__':
-    Evaluator.frequencyTest(10, 100)
+    Evaluator.all_test(10, 10)

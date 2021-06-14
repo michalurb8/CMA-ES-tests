@@ -26,22 +26,50 @@ def evaluate(dimensions: int, mode: str, frequency: int, iterations: int):
             ecdf_result.append(sum([ecdf[i] for ecdf in ecdf_list])/iterations)
         return ecdf_result
 
-def frequencyTest(dimensions: int, iterations: int):
-    ecdf1 = evaluate(dimensions, 'mean', 1, iterations)
-    ecdf10 = evaluate(dimensions, 'mean', 5, iterations)
-    ecdf100 = evaluate(dimensions, 'mean', 50, iterations)
-
-    plt.plot(ecdf1, label = 'mean 1')
-    plt.plot(ecdf10, label = 'mean 5')
-    plt.plot(ecdf100, label = 'mean 50')
+def selected_frequency_test(dimensions: int, iterations: int):
+    ecdf_ms_1 = evaluate(dimensions, 'mean_selected', 1, iterations)
+    ecdf_ms_5 = evaluate(dimensions, 'mean_selected', 5, iterations)
+    ecdf_ms_50 = evaluate(dimensions, 'mean_selected', 50, iterations)
+    plt.plot(ecdf_ms_1, label = 'mean_selected 1')
+    plt.plot(ecdf_ms_5, label = 'mean_selected 5')
+    plt.plot(ecdf_ms_50, label = 'mean_selected 50')
     plt.legend()
     plt.show()
 
-def modificationTest(dimensions: int, iterations: int):
-    ecdf_normal = evaluate(dimensions, 'normal', None, iterations)
-    ecdf_mean = evaluate(dimensions, 'mean', 1, iterations)
+def all_frequency_test(dimensions: int, iterations: int):
+    ecdf_ma_1 = evaluate(dimensions, 'mean_all', 1, iterations)
+    ecdf_ma_5 = evaluate(dimensions, 'mean_all', 5, iterations)
+    ecdf_ma_50 = evaluate(dimensions, 'mean_all', 50, iterations)
+    plt.plot(ecdf_ma_1, label = 'mean_all 1')
+    plt.plot(ecdf_ma_5, label = 'mean_all 5')
+    plt.plot(ecdf_ma_50, label = 'mean_all 50')
+    plt.legend()
+    plt.show()
 
+def modifications_test(dimensions: int, iterations: int):
+    ecdf_normal = evaluate(dimensions, 'normal', None, iterations)
+    ecdf_mean_all = evaluate(dimensions, 'mean_all', 1, iterations)
+    ecdf_mean_selected = evaluate(dimensions, 'mean_selected', 1, iterations)
     plt.plot(ecdf_normal, label = 'normal')
-    plt.plot(ecdf_mean, label = 'mean 1')
+    plt.plot(ecdf_mean_all, label = 'mean_all 1')
+    plt.plot(ecdf_mean_selected, label = 'mean_selected 1')
+    plt.legend()
+    plt.show()
+
+def all_test(dimensions: int, iterations: int):
+    ecdf_ms_1 = evaluate(dimensions, 'mean_selected', 1, iterations)
+    ecdf_ms_5 = evaluate(dimensions, 'mean_selected', 5, iterations)
+    ecdf_ms_50 = evaluate(dimensions, 'mean_selected', 50, iterations)
+    ecdf_normal = evaluate(dimensions, 'normal', None, iterations)
+    ecdf_ma_1 = evaluate(dimensions, 'mean_all', 1, iterations)
+    ecdf_ma_5 = evaluate(dimensions, 'mean_all', 5, iterations)
+    ecdf_ma_50 = evaluate(dimensions, 'mean_all', 50, iterations)
+    plt.plot(ecdf_ms_1, label = 'mean_selected 1')
+    plt.plot(ecdf_ms_5, label = 'mean_selected 5')
+    plt.plot(ecdf_ms_50, label = 'mean_selected 50')
+    plt.plot(ecdf_normal, label = 'normal')
+    plt.plot(ecdf_ma_1, label = 'mean_all 1')
+    plt.plot(ecdf_ma_5, label = 'mean_all 5')
+    plt.plot(ecdf_ma_50, label = 'mean_all 50')
     plt.legend()
     plt.show()

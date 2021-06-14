@@ -25,7 +25,7 @@ class CMAES:
 
         # Set up selection
         # Population size
-        self._lambda = int(4 + np.floor(3 * np.log(self._dimension)))
+        self._lambda = 100 #int(4 + np.floor(3 * np.log(self._dimension)))
         # Number of parents/points for recombination
         self._mu = self._lambda // 2
         # Recombination weights
@@ -95,8 +95,10 @@ class CMAES:
             self._B, self._D = self._eigen_decomposition()
             solutions = []
             value_break_condition = False
-            for _ in range(self._lambda):
-                # Ask a parameter
+            new_points = self._lambda
+            if self._mode != 'normal' and count_it % self._modification_every == 0:
+                new_points = self._lambda - 1
+            for _ in range(new_points):
                 x = self._sample_solution()
 
                 value = self.objective(x)
@@ -106,10 +108,30 @@ class CMAES:
                     self.results.append((count_it, value))
                     break
                 solutions.append((x, value))
-
             if value_break_condition == True:
                 break
+            if self._mode == 'mean_all' and count_it % self._modification_every == 0:
+                population = np.array([s[0] for s in solutions])
+                x = np.mean(population, axis=0)
+                value = self.objective(x)
+                self._best_value = min(value, self._best_value)
+                if value < self._stop_value:
+                    self.results.append((count_it, value))
+                    break
+                solutions.append((x, value))
+            if self._mode == 'mean_selected' and count_it % self._modification_every == 0:
+                solutions.sort(key=lambda solution: solution[1])
+                selected = np.array([s[0] for s in solutions])[:self._mu]
+                x = np.mean(selected, axis=0)
+                value = self.objective(x)
+                self._best_value = min(value, self._best_value)
+                if value < self._stop_value:
+                    self.results.append((count_it, value))
+                    break
+                solutions.append((x, value))
+
             # Tell evaluation values.
+            assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
             self.tell(solutions)
             self.results.append((count_it, self._best_value))
 
@@ -141,8 +163,6 @@ class CMAES:
 
         # Selection and recombination
         selected = y_k[: self._mu]
-        if self._mode == 'mean' and self._generation % self._modification_every == 0:
-            selected[self._mu - 1] = np.mean(y_k, axis=0)
         y_w = np.sum(selected.T * self._weights[: self._mu], axis=1)
         self._xmean += self._sigma * y_w
 
