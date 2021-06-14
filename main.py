@@ -1,16 +1,14 @@
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
+import Evaluator
 
-# from cmaes import CMAES
-from cmaes2 import CMAES
+from cmaes import CMAES
 
 parser = argparse.ArgumentParser(prog="CMA-ES",
                                  description='This program allows you to run CMA-ES')
 
 parser.add_argument('-m', '--mode', type=str, default='normal',
                     help='Program mode.',
-                    choices=['normal', 'mean'])
+                    choices=['normal', 'mean', 'mean2'])
 
 parser.add_argument('-fr', '--frequency', type=int, default=1,
                     help='How many iteration apart should modification of the algorithm take place.'
@@ -30,8 +28,4 @@ def print_mode(mode):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-
-    print_mode(args.mode)
-
-    algo = CMAES(args.function, args.dimensions, args.mode, args.frequency)
-    algo.generation_loop()
+    Evaluator.frequencyTest(100)

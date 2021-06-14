@@ -1,26 +1,27 @@
-from cmaes2 import CMAES
+from cmaes import CMAES
 import numpy as np
 import matplotlib.pyplot as plt
 
 _TARGETS = np.array([10**i for i in range(-10, 10)])
 
-def evaluate(dimensions: int, mode: str, frequency: int, iterations: int):
+def evaluate(mode: str, frequency: int, iterations: int):
         ecdf_list = []
-        for i in range(iterations): #run algorithm $iteration times, store results
-            print(i, "th run, felli")
-            algo = CMAES('felli', dimensions, mode, frequency)
-            algo.generation_loop()
-            ecdf_list.append(algo.ecdf(_TARGETS))
-        for i in range(iterations): #run algorithm $iteration times, store results
-            print(i, "th run, quadratic")
-            algo = CMAES('quadratic', dimensions, mode, frequency)
-            algo.generation_loop()
-            ecdf_list.append(algo.ecdf(_TARGETS))
-        for i in range(iterations): #run algorithm $iteration times, store results
-            print(i, "th run, bent")
-            algo = CMAES('bent', dimensions, mode, frequency)
-            algo.generation_loop()
-            ecdf_list.append(algo.ecdf(_TARGETS))
+        for dim in [10]:
+            print("Running", iterations, "felli,", dim, "dimensions.")
+            for i in range(iterations): #run algorithm $iteration times, store results
+                algo = CMAES('felli', dim, mode, frequency)
+                algo.generation_loop()
+                ecdf_list.append(algo.ecdf(_TARGETS))
+            print("Running", iterations, "quadratic,", dim, "dimensions.")
+            for i in range(iterations): #run algorithm $iteration times, store results
+                algo = CMAES('quadratic', dim, mode, frequency)
+                algo.generation_loop()
+                ecdf_list.append(algo.ecdf(_TARGETS))
+            print("Running", iterations, "bent,", dim, "dimensions.")
+            for i in range(iterations): #run algorithm $iteration times, store results
+                algo = CMAES('bent', dim, mode, frequency)
+                algo.generation_loop()
+                ecdf_list.append(algo.ecdf(_TARGETS))
 
         max_length = max([len(ecdf) for ecdf in ecdf_list])
 
@@ -34,10 +35,10 @@ def evaluate(dimensions: int, mode: str, frequency: int, iterations: int):
             ecdf_result.append(sum([ecdf[i] for ecdf in ecdf_list])/iterations)
         return ecdf_result
 
-def frequencyTest(dimensions: int, iterations: int):
-    ecdf1 = evaluate(dimensions, 'mean', 1, iterations)
-    ecdf10 = evaluate(dimensions, 'mean', 5, iterations)
-    ecdf100 = evaluate(dimensions, 'mean', 100, iterations)
+def frequencyTest(iterations: int):
+    ecdf1 = evaluate('mean', 1, iterations)
+    ecdf10 = evaluate('mean', 5, iterations)
+    ecdf100 = evaluate('mean', 50, iterations)
 
     plt.plot(ecdf1, label = 'mean 1')
     plt.plot(ecdf10, label = 'mean 5')

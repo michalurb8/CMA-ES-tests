@@ -17,9 +17,9 @@ class CMAES:
         self._mode = mode
         self._modification_every = modification_every
         # Initial point
-        self._xmean = np.random.rand(self._dimension)
+        self._xmean = 10*np.random.rand(self._dimension)
         # Step size
-        self._sigma = 0.05
+        self._sigma = 10
         self._stop_value = 1e-10
         self._stop_after = 1000 * self._dimension ** 2
 
@@ -73,49 +73,55 @@ class CMAES:
         # Covariance matrix
         self._C = np.eye(self._dimension)
 
-        self._bounds = None
-        self._n_max_resampling = 100
+        # self._bounds = None # WHY
+        # self._n_max_resampling = 100 # WHY
 
         # Parameter for B and D update timing
         self._generation = 0
 
         # Termination criteria
-        self._tolx = 1e-12 * self._sigma
-        self._tolxup = 1e4
-        self._tolfun = 1e-12
-        self._tolconditioncov = 1e14
+        # self._tolx = 1e-12 * self._sigma # WHY
+        # self._tolxup = 1e4 # WHY
+        # self._tolfun = 1e-12 # WHY 
+        # self._tolconditioncov = 1e14 # WHY
+
+        self._results = []
+        self._best_value = float('inf')
 
     def generation_loop(self):
-        results = []
-        value = 1e32
+        self.results = []
+        value = float('inf')
         for count_it in range(self._stop_after):
+            self._B, self._D = self._eigen_decomposition()
             solutions = []
+            value_break_condition = False
             for _ in range(self._lambda):
                 # Ask a parameter
                 x = self._sample_solution()
 
                 value = self.objective(x)
+                self._best_value = min(value, self._best_value)
+                if value < self._stop_value:
+                    value_break_condition = True
+                    self.results.append((count_it, value))
+                    break
                 solutions.append((x, value))
-                print(f"#{count_it} {value} (x1={x[0]}, x2 = {x[1]})")
-            if value < self._stop_value:
+
+            if value_break_condition == True:
                 break
             # Tell evaluation values.
             self.tell(solutions)
-            results.append([x[1] for x in solutions])
-
-        plot_result(results)
+            self.results.append((count_it, self._best_value))
 
     def _sample_solution(self) -> np.ndarray:
-        self._B, self._D = self._eigen_decomposition()
         arz = np.random.standard_normal(self._dimension)
         return self._xmean + self._sigma * np.matmul(np.matmul(self._B, np.diag(self._D)), arz)
 
     def _eigen_decomposition(self) -> Tuple[np.ndarray, np.ndarray]:
-        self._C = (self._C + self._C.T) / 2
+        # self._C = (self._C + self._C.T) / 2 # WHY
         D2, B = np.linalg.eigh(self._C)
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
-        self._C = np.dot(np.dot(B, np.diag(D ** 2)), B.T)
-
+        # self._C = np.dot(np.dot(B, np.diag(D ** 2)), B.T) # WHY
         return B, D
 
     def tell(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
@@ -182,45 +188,55 @@ class CMAES:
                    < 1.4 + 2 / (self._dimension + 1))
 
     def objective(self, x):
+        assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
         if self._fitness == 'felli':
-            assert self._dimension > 1, 'Dimension must be greater than 1.'
             return felli(x)
         elif self._fitness == 'quadratic':
-            assert self._dimension == 2, 'Invalid dimension for quadratic function.'
             return quadratic(x)
         elif self._fitness == 'bent':
-            assert self._dimension > 1, 'Dimension must be greater than 1.'
             return bent_cigar(x)
         elif self._fitness == 'rastrigin':
-            assert self._dimension > 1, 'Dimension must be greater than 1.'
             return rastrigin(x)
         elif self._fitness == 'rosenbrock':
-            assert self._dimension > 1, 'Dimension must be greater than 1.'
             return rosenbrock(x)
         raise Exception('Invalid objective function chosen')
 
+    def ecdf(self, targets: np.array):
+        assert self.results != [], "Can't plot results, must run the algorithm first"
+        ecdf = []
+        for result in self.results:
+            passed = 0
+            for target in targets:
+                if result[1] <= target:
+                    passed +=1
+            ecdf.append(passed/len(targets))
+        return ecdf
 
-def plot_result(results):
-    results = [np.max(list) for list in results]
-    x_axis = np.arange(len(results))
-    plt.plot(x_axis, results)
-    plt.xlabel('Timestep')
-    plt.ylabel('Obj fun')
-    plt.grid()
-    plt.show()
+    def plot_result(self):
+        assert self.results != [], "Can't plot results, must run the algorithm first"
+        x_axis = [iter for (iter, _) in self.results]
+        y_axis = [value for (_, value) in self.results]
+        plt.xlabel('Iterations')
+        plt.ylabel('Best objective value')
+        plt.yscale('log')
+        plt.grid()
+        plt.scatter(x_axis, y_axis)
+        plt.show()
 
 
-def generate_random_matrix(x, y):
-    return [np.random.rand(y) for _ in range(x)]
+# def generate_random_matrix(x, y): # WHY
+#     return [np.random.rand(y) for _ in range(x)]
 
 
-def felli(x: np.ndarray):
+def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
+    if dim == 1:
+        return quadratic(x)
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
     return np.matmul(arr, x ** 2)
 
-def quadratic(x: np.ndarray):
-    return (x[0] - 3) ** 2 + (10 * (x[1] + 2)) ** 2
+def quadratic(x: np.ndarray) -> float:
+    return np.dot(x,x)
 
 def bent_cigar(x: np.ndarray) -> float:
     return x[0]**2 + 1e6*np.sum(x[1:]**2)
