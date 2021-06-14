@@ -17,11 +17,11 @@ class CMAES:
         self._mode = mode
         self._modification_every = modification_every
         # Initial point
-        self._xmean = 10*np.random.rand(self._dimension)
+        self._xmean = 20*np.random.rand(self._dimension)
         # Step size
         self._sigma = 10
         self._stop_value = 1e-10
-        self._stop_after = 1000 * self._dimension ** 2
+        self._stop_after = 100 * self._dimension ** 2
 
         # Set up selection
         # Population size
