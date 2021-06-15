@@ -108,7 +108,7 @@ class CMAES:
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
                 if value < self._stop_value:
-                    self.results.append((count_it, value))
+                    self._results.append((count_it, value))
                     break
                 solutions.append((x, value))
             if self._mode == 'mean_selected' and count_it % self._modification_every == 0:
@@ -118,7 +118,7 @@ class CMAES:
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
                 if value < self._stop_value:
-                    self.results.append((count_it, value))
+                    self._results.append((count_it, value))
                     break
                 solutions.append((x, value))
 
