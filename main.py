@@ -5,7 +5,9 @@ parser = argparse.ArgumentParser(prog="CMA-ES",
                                  description='This program allows you to run CMA-ES')
 
 parser.add_argument('-m', '--mode', type=str, default='normal',
-                    help='Program mode.',
+                    help='Program mode. Normal will run default CMA-ES implementation, while \'mean_all\' and '
+                         '\'mean_selected\' will run algorithm with modification adding a mean point to the '
+                         'population, calculated respectively either from whole population all best percentage of it.',
                     choices=['normal', 'mean_all', 'mean_selected'])
 
 parser.add_argument('-i', '--iterations', type=int, default=100,
@@ -13,7 +15,7 @@ parser.add_argument('-i', '--iterations', type=int, default=100,
 
 parser.add_argument('-fr', '--frequency', type=int, default=1,
                     help='How many iteration apart should modification of the algorithm take place.'
-                         'Required when mode is \'mean\', ignored otherwise')
+                         'Ignored if \'normal\' mode is selected')
 
 parser.add_argument('-f', '--functions', nargs='+',
                     help='Objective functions to be used for the algorithm. '
