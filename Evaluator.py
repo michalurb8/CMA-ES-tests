@@ -2,7 +2,8 @@ from cmaes import CMAES
 import numpy as np
 import matplotlib.pyplot as plt
 
-_TARGETS = np.array([10**i for i in range(-10, 10)])
+_TARGETS = np.array([10 ** i for i in range(-10, 10)])
+
 
 def evaluate(dimensions: int, mode: str, frequency: int, iterations: int, lambda_arg: int):
         ecdf_list = []
