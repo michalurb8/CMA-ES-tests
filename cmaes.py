@@ -41,9 +41,9 @@ class CMAES:
                          ((self._dimension + 2) ** 2 + 2 * self._mu_effective / 2))
 
         min_alpha = min(
-            1 + self._lr_c1 / self._lr_c_mu,
+            1 + self._lr_c1 / (self._lr_c_mu + _EPS),
             1 + (2 * self._mu_effective_minus / (self._mu_effective + 2)),
-            (1 - self._lr_c1 - self._lr_c_mu) / (self._dimension * self._lr_c_mu)
+            (1 - self._lr_c1 - self._lr_c_mu) / (self._dimension * self._lr_c_mu + _EPS)
         )
         positive_sum = np.sum(weights_prime[weights_prime > 0])
         negative_sum = np.sum(np.abs(weights_prime[weights_prime < 0]))
