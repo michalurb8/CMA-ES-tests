@@ -1,8 +1,6 @@
 import argparse
 import Evaluator
 
-from cmaes import CMAES
-
 parser = argparse.ArgumentParser(prog="CMA-ES",
                                  description='This program allows you to run CMA-ES')
 
@@ -28,4 +26,4 @@ def print_mode(mode):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.frequencyTest(100)
+    Evaluator.frequency_test(100)

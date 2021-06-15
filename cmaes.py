@@ -17,7 +17,7 @@ class CMAES:
         self._mode = mode
         self._modification_every = modification_every
         # Initial point
-        self._xmean = 10*np.random.rand(self._dimension)
+        self._xmean = 10 * np.random.rand(self._dimension)
         # Step size
         self._sigma = 10
         self._stop_value = 1e-10
@@ -73,24 +73,14 @@ class CMAES:
         # Covariance matrix
         self._C = np.eye(self._dimension)
 
-        # self._bounds = None # WHY
-        # self._n_max_resampling = 100 # WHY
-
         # Parameter for B and D update timing
         self._generation = 0
-
-        # Termination criteria
-        # self._tolx = 1e-12 * self._sigma # WHY
-        # self._tolxup = 1e4 # WHY
-        # self._tolfun = 1e-12 # WHY 
-        # self._tolconditioncov = 1e14 # WHY
 
         self._results = []
         self._best_value = float('inf')
 
     def generation_loop(self):
-        self.results = []
-        value = float('inf')
+        self._results = []
         for count_it in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
             solutions = []
@@ -103,25 +93,23 @@ class CMAES:
                 self._best_value = min(value, self._best_value)
                 if value < self._stop_value:
                     value_break_condition = True
-                    self.results.append((count_it, value))
+                    self._results.append((count_it, value))
                     break
                 solutions.append((x, value))
 
-            if value_break_condition == True:
+            if value_break_condition:
                 break
             # Tell evaluation values.
             self.tell(solutions)
-            self.results.append((count_it, self._best_value))
+            self._results.append((count_it, self._best_value))
 
     def _sample_solution(self) -> np.ndarray:
         arz = np.random.standard_normal(self._dimension)
         return self._xmean + self._sigma * np.matmul(np.matmul(self._B, np.diag(self._D)), arz)
 
     def _eigen_decomposition(self) -> Tuple[np.ndarray, np.ndarray]:
-        # self._C = (self._C + self._C.T) / 2 # WHY
         D2, B = np.linalg.eigh(self._C)
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
-        # self._C = np.dot(np.dot(B, np.diag(D ** 2)), B.T) # WHY
         return B, D
 
     def tell(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
@@ -202,20 +190,20 @@ class CMAES:
         raise Exception('Invalid objective function chosen')
 
     def ecdf(self, targets: np.array):
-        assert self.results != [], "Can't plot results, must run the algorithm first"
+        assert self._results != [], "Can't plot results, must run the algorithm first"
         ecdf = []
-        for result in self.results:
+        for result in self._results:
             passed = 0
             for target in targets:
                 if result[1] <= target:
-                    passed +=1
-            ecdf.append(passed/len(targets))
+                    passed += 1
+            ecdf.append(passed / len(targets))
         return ecdf
 
     def plot_result(self):
-        assert self.results != [], "Can't plot results, must run the algorithm first"
-        x_axis = [iter for (iter, _) in self.results]
-        y_axis = [value for (_, value) in self.results]
+        assert self._results != [], "Can't plot results, must run the algorithm first"
+        x_axis = [it for (it, _) in self._results]
+        y_axis = [value for (_, value) in self._results]
         plt.xlabel('Iterations')
         plt.ylabel('Best objective value')
         plt.yscale('log')
@@ -224,25 +212,25 @@ class CMAES:
         plt.show()
 
 
-# def generate_random_matrix(x, y): # WHY
-#     return [np.random.rand(y) for _ in range(x)]
-
-
 def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
     if dim == 1:
         return quadratic(x)
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
-    return np.matmul(arr, x ** 2)
+    return float(np.matmul(arr, x ** 2))
+
 
 def quadratic(x: np.ndarray) -> float:
-    return np.dot(x,x)
+    return float(np.dot(x, x))
+
 
 def bent_cigar(x: np.ndarray) -> float:
-    return x[0]**2 + 1e6*np.sum(x[1:]**2)
+    return x[0] ** 2 + 1e6 * np.sum(x[1:] ** 2)
+
 
 def rastrigin(x: np.ndarray) -> float:
-    return np.sum(x**2 + -10*(np.cos(2*np.pi*x)) + 10)
+    return float(np.sum(x ** 2 + -10 * (np.cos(2 * np.pi * x)) + 10))
+
 
 def rosenbrock(x: np.ndarray) -> float:
-    return sum([100*(x[i]**2 - x[i+1])**2 + (x[i]-1)**2 for i in range(x.shape[0]-1)])
+    return sum([100 * (x[i] ** 2 - x[i + 1]) ** 2 + (x[i] - 1) ** 2 for i in range(x.shape[0] - 1)])
