@@ -23,7 +23,7 @@ def evaluate(dimensions: int, mode: str, frequency: int, iterations: int):
         
         ecdf_result = []
         for i in range(max_length):
-            ecdf_result.append(sum([ecdf[i] for ecdf in ecdf_list])/iterations)
+            ecdf_result.append(sum([ecdf[i] for ecdf in ecdf_list])/len(ecdf_list))
         return ecdf_result
 
 def selected_frequency_test(dimensions: int, iterations: int):
