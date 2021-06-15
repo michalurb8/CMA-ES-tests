@@ -26,9 +26,9 @@ parser.add_argument('-d', '--dimensions', type=int, default=10,
 parser.add_argument('-l', '--lbd', type=int, default=100,
                     help='Population size.')
 
-parser.add_argument('-t', '--test_case', type=str,
+parser.add_argument('-t', '--test_case', type=str, default='all',
                     help='Which previously prepared test case to run.',
-                    choices=['selected_frequency', 'all_frequency', 'modifications', 'all'])
+                    choices=['selected_frequency', 'all_frequency', 'modifications', 'all', 'custom'])
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -40,6 +40,6 @@ if __name__ == '__main__':
         Evaluator.modifications_test(args.dimensions, args.iterations, args.lbd)
     elif args.test_case == 'all':
         Evaluator.all_test(args.dimensions, args.iterations, args.lbd)
-    else:
+    elif args.test_case == 'custom':
         Evaluator.custom_test(dimensions=args.dimensions, frequency=args.frequency, objectives=args.functions,
                               iterations=args.iterations, mode=args.mode, lambda_arg=args.lbd)
