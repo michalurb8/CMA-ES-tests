@@ -10,7 +10,8 @@ _SIGMA_MAX = 1e32
 
 class CMAES:
 
-    def __init__(self, objective_function: str, dimensions: int, mode: str, modification_every: int, lambda_arg: int):
+    def __init__(self, objective_function: str, dimensions: int, mode: str, modification_every: int,
+                 lambda_arg: int = 100):
         self._fitness = objective_function
         self._dimension = dimensions
         self._mode = mode
