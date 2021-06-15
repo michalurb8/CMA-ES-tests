@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
 _EPS = 1e-8
 _MEAN_MAX = 1e32
@@ -17,7 +16,7 @@ class CMAES:
         self._mode = mode
         self._modification_every = modification_every
         # Initial point
-        self._xmean = 5*np.random.rand(self._dimension)
+        self._xmean = 5 * np.random.rand(self._dimension)
         # Step size
         self._sigma = 10
         self._stop_value = 1e-10
@@ -87,8 +86,10 @@ class CMAES:
             solutions = []
             value_break_condition = False
             new_points = self._lambda
+
             if self._mode != 'normal' and count_it % self._modification_every == 0:
                 new_points = self._lambda - 1
+
             for _ in range(new_points):
                 x = self._sample_solution()
 
@@ -102,19 +103,15 @@ class CMAES:
 
             if value_break_condition:
                 break
-            if self._mode == 'mean_all' and count_it % self._modification_every == 0:
-                population = np.array([s[0] for s in solutions])
-                x = np.mean(population, axis=0)
-                value = self.objective(x)
-                self._best_value = min(value, self._best_value)
-                if value < self._stop_value:
-                    self._results.append((count_it, value))
-                    break
-                solutions.append((x, value))
-            if self._mode == 'mean_selected' and count_it % self._modification_every == 0:
-                solutions.sort(key=lambda solution: solution[1])
-                selected = np.array([s[0] for s in solutions])[:self._mu]
-                x = np.mean(selected, axis=0)
+
+            if self._mode != 'normal' and count_it % self._modification_every == 0:
+                if self._mode == 'mean_all':
+                    population = np.array([s[0] for s in solutions])
+                    x = np.mean(population, axis=0)
+                else:
+                    solutions.sort(key=lambda solution: solution[1])
+                    selected = np.array([s[0] for s in solutions])[:self._mu]
+                    x = np.mean(selected, axis=0)
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
                 if value < self._stop_value:
