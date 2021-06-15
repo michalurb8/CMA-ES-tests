@@ -11,13 +11,13 @@ _SIGMA_MAX = 1e32
 
 class CMAES:
 
-    def __init__(self, objective_function: str, dimensions: int, mode: str, modification_every: int):
+    def __init__(self, objective_function: str, dimensions: int, mode: str, modification_every: int, lambda_arg: int):
         self._fitness = objective_function
         self._dimension = dimensions
         self._mode = mode
         self._modification_every = modification_every
         # Initial point
-        self._xmean = 20*np.random.rand(self._dimension)
+        self._xmean = 5*np.random.rand(self._dimension)
         # Step size
         self._sigma = 10
         self._stop_value = 1e-10
@@ -25,7 +25,8 @@ class CMAES:
 
         # Set up selection
         # Population size
-        self._lambda = 100 #int(4 + np.floor(3 * np.log(self._dimension)))
+        assert lambda_arg > 2, "Lambda must be greater than 2"
+        self._lambda = lambda_arg
         # Number of parents/points for recombination
         self._mu = self._lambda // 2
         # Recombination weights

@@ -25,4 +25,4 @@ def print_mode(mode):
 
 
 if __name__ == '__main__':
-    Evaluator.all_test(10, 10)
+    Evaluator.all_test(10, 100, 100)
