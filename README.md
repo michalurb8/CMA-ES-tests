@@ -7,7 +7,7 @@ matplotlib 3.4.0
 
 Run with:
 python3 main.py
-This will test all variants of the algorithm and show resulting ECDF curves.
+This will run the default test on all variants of the algorithm and show resulting ECDF curves.
 May take a long time.
 
 All testing parameters can be set manually. For help, run:
