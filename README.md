@@ -1,9 +1,12 @@
 # AMHE-CMA-ES
-A modification of CMA-ES for AMHE classes
+An implementation of CMA-ES algorithm for testing box constraints repair methods.
 
 Required Python3 libraries:
 numpy 1.20.2
 matplotlib 3.4.0
+???
+
+Dalej zostaje stare: /TODODODO
 
 Run with:
 python3 main.py
