@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 from typing import List, Tuple
 
+from numpy.ma.core import count
+
 _EPS = 1e-8
 _MEAN_MAX = 1e32
 _SIGMA_MAX = 1e32
@@ -18,7 +20,7 @@ class CMAES:
         # Initial point
         self._xmean = 5 * np.random.rand(self._dimension)
         # Step size
-        self._sigma = 10
+        self._sigma = 1
         self._stop_value = 1e-10
         self._stop_after = 100 * self._dimension ** 2
 
@@ -63,6 +65,7 @@ class CMAES:
     def generation_loop(self):
         self._results = []
         for count_it in range(self._stop_after):
+            print(count_it) #debug
             self._B, self._D = self._eigen_decomposition()
             solutions = []
             value_break_condition = False
@@ -116,15 +119,17 @@ class CMAES:
         self._xmean += self._sigma * y_w
 
         #debug:
-        x1 = [point[0] for point in y_k]
-        x2 = [point[1] for point in y_k]
-        plt.scatter(x1, x2)
-        x1 = [point[0] for point in selected]
-        x2 = [point[1] for point in selected]
-        plt.scatter(x1, x2)
+        plt.axis('equal')
+        x1 = [point[0] for point in population]
+        x2 = [point[1] for point in population]
+        plt.scatter(x1, x2, s=50)
+        x1 = [point[0] for point in population[:self._mu]]
+        x2 = [point[1] for point in population[:self._mu]]
+        plt.scatter(x1, x2, s=20)
+        plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
         plt.grid()
-        plt.show(block = False)
-        plt.pause(0.5)
+        # plt.show(block = False)
+        plt.pause(0.2)
         plt.clf()
         plt.cla()
         #debug
@@ -133,13 +138,18 @@ class CMAES:
         # C^(-1/2) = B D^(-1) B^T
         C_2 = np.matmul(np.matmul(self._B, np.diag(1 / (self._D + _EPS))), self._B.T)
 
-        ps_delta = (np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu) *
-                    np.matmul(C_2, y_w))
-        self._path_sigma = (1 - self._time_sigma) * self._path_sigma + ps_delta
+        _path_sigma_delta = (np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu) *
+                        np.matmul(C_2, y_w))
+        self._path_sigma = (1 - self._time_sigma) * self._path_sigma + _path_sigma_delta
 
         self._sigma *= np.exp((self._time_sigma / self._damping) *
-                              (np.linalg.norm(self._path_sigma) / self._chi - 1))
+                        (np.linalg.norm(self._path_sigma) / self._chi - 1))
         self._sigma = min(self._sigma, _SIGMA_MAX)
+
+        print(np.linalg.norm(self._path_sigma)) # ???
+        print(np.linalg.norm(self._path_c))
+        print(self._C)
+        print()
 
         # Covariance matrix adaption
         self._path_c = ((1 - self._time_c) * self._path_c +
@@ -152,9 +162,7 @@ class CMAES:
                 (1 - self._lr_c1 - self._lr_c_mu) * self._C
                 + self._lr_c1 * rank_one
                 + self._lr_c_mu * rank_mu
-        )
-        print("rank one", rank_one)
-        print("rank mu", rank_mu)
+        ) # ujemne wariancje? xddd
 
     def objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
