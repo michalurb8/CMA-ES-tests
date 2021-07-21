@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 
 from typing import List, Tuple
 
-from numpy.ma.core import count
-
 _EPS = 1e-8
 _MEAN_MAX = 1e32
 _SIGMA_MAX = 1e32
@@ -22,19 +20,24 @@ class CMAES:
         # Step size
         self._sigma = 1
         self._stop_value = 1e-10
-        self._stop_after = 100 * self._dimension ** 2
+        self._stop_after = 1000 * self._dimension ** 2
 
         # Set up selection
         # Population size
         assert lambda_arg > 2, "Lambda must be greater than 2"
         self._lambda = lambda_arg
+        if self._mode == "l100":
+            self._lambda = 100
+        if self._mode == "formula":
+            self._lambda = 4 + int(3 * np.log(self._dimension))
         # Number of parents/points for recombination
         self._mu = self._lambda // 2
 
         # Learning rates for rank-one and rank-mu update
         self._lr_c1 = 2 / ((self._dimension + 1.3) ** 2 + self._mu)
-        self._lr_c_mu = (2 * (self._mu- 2 + 1 / self._mu) /
-                         ((self._dimension + 2) ** 2 + 2 * self._mu/ 2))
+        self._lr_c_mu = (2 * (self._mu - 2 + 1 / self._mu) /
+                         ((self._dimension + 2) ** 2 + self._mu))
+        self._lr_c_mu = min(1-self._lr_c1, self._lr_c_mu)
 
         # Time constants for cumulation for step-size control
         self._time_sigma = (self._mu+ 2) / (self._dimension + self._mu+ 5)
@@ -63,9 +66,8 @@ class CMAES:
         self._best_value = float('inf')
 
     def generation_loop(self):
-        self._results = []
-        for count_it in range(self._stop_after):
-            print(count_it) #debug
+        assert self._results == [], "One instance can only run once."
+        for gen_count in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
             solutions = []
             value_break_condition = False
@@ -77,7 +79,7 @@ class CMAES:
                 self._best_value = min(value, self._best_value)
                 if value < self._stop_value:
                     value_break_condition = True
-                    self._results.append((count_it, value))
+                    self._results.append((gen_count, value))
                     break
                 solutions.append((x, value))
 
@@ -87,7 +89,7 @@ class CMAES:
             # Tell evaluation values.
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
             self.tell(solutions)
-            self._results.append((count_it, self._best_value))
+            self._results.append((gen_count, self._best_value))
 
     def _sample_solution(self) -> np.ndarray:
         std = np.random.standard_normal(self._dimension)
@@ -118,21 +120,21 @@ class CMAES:
         y_w = np.mean(selected, axis=0)
         self._xmean += self._sigma * y_w
 
-        #debug:
-        plt.axis('equal')
-        x1 = [point[0] for point in population]
-        x2 = [point[1] for point in population]
-        plt.scatter(x1, x2, s=50)
-        x1 = [point[0] for point in population[:self._mu]]
-        x2 = [point[1] for point in population[:self._mu]]
-        plt.scatter(x1, x2, s=20)
-        plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
-        plt.grid()
-        # plt.show(block = False)
-        plt.pause(0.2)
-        plt.clf()
-        plt.cla()
-        #debug
+        # #debug:
+        # plt.axis('equal')
+        # x1 = [point[0] for point in population]
+        # x2 = [point[1] for point in population]
+        # plt.scatter(x1, x2, s=50)
+        # x1 = [point[0] for point in population[:self._mu]]
+        # x2 = [point[1] for point in population[:self._mu]]
+        # plt.scatter(x1, x2, s=20)
+        # plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
+        # plt.grid()
+        # # plt.show(block = False)
+        # plt.pause(0.02)
+        # plt.clf()
+        # plt.cla()
+        # #debug
 
         # Step-size control
         # C^(-1/2) = B D^(-1) B^T
@@ -146,11 +148,6 @@ class CMAES:
                         (np.linalg.norm(self._path_sigma) / self._chi - 1))
         self._sigma = min(self._sigma, _SIGMA_MAX)
 
-        print(np.linalg.norm(self._path_sigma)) # ???
-        print(np.linalg.norm(self._path_c))
-        print(self._C)
-        print()
-
         # Covariance matrix adaption
         self._path_c = ((1 - self._time_c) * self._path_c +
                         np.sqrt(self._time_c * (2 - self._time_c) * self._mu) * y_w)
@@ -162,7 +159,7 @@ class CMAES:
                 (1 - self._lr_c1 - self._lr_c_mu) * self._C
                 + self._lr_c1 * rank_one
                 + self._lr_c_mu * rank_mu
-        ) # ujemne wariancje? xddd
+        )
 
     def objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
@@ -187,7 +184,7 @@ class CMAES:
                 if result[1] <= target:
                     passed += 1
             ecdf.append(passed / len(targets))
-        return ecdf
+        return (ecdf, self._lambda)
 
     def plot_result(self):
         assert self._results != [], "Can't plot results, must run the algorithm first"
