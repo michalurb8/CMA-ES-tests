@@ -5,19 +5,19 @@ import matplotlib.pyplot as plt
 _TARGETS = np.array([10 ** i for i in range(-10, 10)])
 
 
-def evaluate(mode: str, dimensions: int = 10, iterations: int = 100, lambda_arg: int = 100, objectives: list = None):
+def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int = 100, objectives: list = None, lambda_arg: int = None, visuals: bool = False):
     if objectives is None:
-        objectives = ['quadratic', 'felli', 'bent']
+            objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock']
 
     ecdf_list = []
     evals_per_gen = None
     print("Starting evaluation...")
-    print(f"mode: {mode}; dimensions: {dimensions}; iterations: {iterations}; "
-          f"population: {lambda_arg}")
+    lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
+    print(f"mode: {mode}; dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}")
     for objective in objectives:
         print("    Currently running:", objective)
         for _ in range(iterations):
-            algo = CMAES(objective, dimensions, mode, lambda_arg)
+            algo = CMAES(objective, dimensions, mode, repair_mode, lambda_arg, visuals)
             algo.generation_loop()
             single_ecdf, e = algo.ecdf(_TARGETS)
             ecdf_list.append(single_ecdf)
@@ -43,10 +43,19 @@ def _get_ecdf_data(ecdf_list: list, evals_per_gen: int):
     xaxis = [x*evals_per_gen for x in range(max_length)]
     return xaxis, ecdf_result
 
-def all_test(dimensions: int, iterations: int, lambda_arg: int):
-    for l in [3,4,5,6,7,8,9,10]:
-        ecdf = evaluate('normal', dimensions, iterations, l)
-        plt.scatter(ecdf[0], ecdf[1], label=str(l))
+def all_test(dimensions: int, iterations: int, lbd: int):
+    runs = [
+        ('normal', None, False),
+        ('constrained', 'reflection', False),
+        ('constrained', 'projection', False),
+        ('constrained', 'resampling', False)
+    ]
+    ecdfs = []
+    for mode, rmode, v in runs:
+        ecdf = evaluate(mode, rmode, dimensions, iterations, None, lbd, False)
+        ecdfs.append((ecdf[0], ecdf[1], str(rmode)))
+    for ecdf in ecdfs:
+        plt.scatter(ecdf[0], ecdf[1], label=ecdf[2])
     plt.legend()
     plt.grid()
     plt.show()

@@ -1,5 +1,4 @@
 import numpy as np
-import time
 import matplotlib.pyplot as plt
 
 from typing import List, Tuple
@@ -8,29 +7,34 @@ _EPS = 1e-8
 _MEAN_MAX = 1e32
 _SIGMA_MAX = 1e32
 
+infp = float('inf')
+infn = float('-inf')
+_RESAMPLING_LIMIT = 10
 
 class CMAES:
 
-    def __init__(self, objective_function: str, dimensions: int, mode: str, lambda_arg: int = 100):
+    def __init__(self, objective_function: str, dimensions: int, mode: str, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
         self._fitness = objective_function
         self._dimension = dimensions
+        self._bounds = [(-0.1, infp) for _ in range(self._dimension)]
         self._mode = mode
+        self._repair_mode = repair_mode
+        self._visuals = visuals
         # Initial point
         self._xmean = 5 * np.random.rand(self._dimension)
         # Step size
         self._sigma = 1
         self._stop_value = 1e-10
-        self._stop_after = 1000 * self._dimension ** 2
+        self._stop_after = 100 * self._dimension ** 2
 
-        # Set up selection
         # Population size
-        assert lambda_arg > 2, "Lambda must be greater than 2"
-        self._lambda = lambda_arg
-        if self._mode == "l100":
-            self._lambda = 100
-        if self._mode == "formula":
-            self._lambda = 4 + int(3 * np.log(self._dimension))
-        # Number of parents/points for recombination
+        if lambda_arg == None:
+            self._lambda = 24 + int(3 * np.log(self._dimension))
+        else:
+            assert lambda_arg > 3, "Population size must be greater than 3"
+            self._lambda = lambda_arg
+
+        # Number of parents/points to be selected
         self._mu = self._lambda // 2
 
         # Learning rates for rank-one and rank-mu update
@@ -63,7 +67,7 @@ class CMAES:
         self._generation = 0
 
         self._results = []
-        self._best_value = float('inf')
+        self._best_value = infp
 
     def generation_loop(self):
         assert self._results == [], "One instance can only run once."
@@ -74,6 +78,8 @@ class CMAES:
 
             for _ in range(self._lambda):
                 x = self._sample_solution()
+                if self._mode != "normal" and not self._check_point(x):
+                    self._repair(x, self._bounds, self._repair_mode)
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
@@ -120,21 +126,26 @@ class CMAES:
         y_w = np.mean(selected, axis=0)
         self._xmean += self._sigma * y_w
 
-        # #debug:
-        # plt.axis('equal')
-        # x1 = [point[0] for point in population]
-        # x2 = [point[1] for point in population]
-        # plt.scatter(x1, x2, s=50)
-        # x1 = [point[0] for point in population[:self._mu]]
-        # x2 = [point[1] for point in population[:self._mu]]
-        # plt.scatter(x1, x2, s=20)
-        # plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
-        # plt.grid()
-        # # plt.show(block = False)
-        # plt.pause(0.02)
-        # plt.clf()
-        # plt.cla()
-        # #debug
+        if self._visuals == True:
+            plt.title = str(self._generation)
+            plt.axis('equal')
+            plt.axvline(0, linewidth=6, c='red')
+            plt.axhline(0, linewidth=6, c='red')
+            plt.axvline(0.1, linewidth=2, c='orange')
+            plt.axhline(0.1, linewidth=2, c='orange')
+            plt.axvline(-0.1, linewidth=2, c='orange')
+            plt.axhline(-0.1, linewidth=2, c='orange')
+            x1 = [point[0] for point in population]
+            x2 = [point[1] for point in population]
+            plt.scatter(x1, x2, s=50)
+            x1 = [point[0] for point in population[:self._mu]]
+            x2 = [point[1] for point in population[:self._mu]]
+            plt.scatter(x1, x2, s=20)
+            plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
+            plt.grid()
+            plt.pause(0.01)
+            plt.clf()
+            plt.cla()
 
         # Step-size control
         # C^(-1/2) = B D^(-1) B^T
@@ -175,7 +186,7 @@ class CMAES:
             return rosenbrock(x)
         raise Exception('Invalid objective function chosen')
 
-    def ecdf(self, targets: np.array):
+    def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
         assert self._results != [], "Can't plot results, must run the algorithm first"
         ecdf = []
         for result in self._results:
@@ -195,6 +206,39 @@ class CMAES:
         plt.yscale('log')
         plt.grid()
         plt.scatter(x_axis, y_axis)
+
+    def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str):
+        assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
+        if repair_mode == 'reflection':
+            for i in range(len(x)):
+                while x[i] < bounds[i][0] or x[i] > bounds[i][1]:
+                    if x[i] < bounds[i][0]:
+                        x[i] = 2 * bounds[i][0] - x[i]
+                    if x[i] > bounds[i][1]:
+                        x[i] = 2 * bounds[i][1] - x[i]
+        elif repair_mode == 'projection':
+            for i in range(len(x)):
+                if x[i] < bounds[i][0]:
+                    x[i] = bounds[i][0]
+                elif x[i] > bounds[i][1]:
+                    x[i] = bounds[i][1]
+        elif repair_mode == 'resampling':
+            for _ in range(_RESAMPLING_LIMIT):
+                new = self._sample_solution()
+                for i in range(len(x)):
+                    x[i] = new[i]
+                if self._check_point(x):
+                    return
+            self._repair(x, bounds, 'projection')
+
+        else:
+            raise Exception("Incorrect repair mode")
+    
+    def _check_point(self, x: np.array):
+        for i in range(len(x)):
+            if x[i] < self._bounds[i][0] or x[i] > self._bounds[i][1]:
+                return False
+        return True
 
 def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
@@ -217,4 +261,4 @@ def rastrigin(x: np.ndarray) -> float:
 
 
 def rosenbrock(x: np.ndarray) -> float:
-    return sum([100 * (x[i] ** 2 - x[i + 1]) ** 2 + (x[i] - 1) ** 2 for i in range(x.shape[0] - 1)])
+    return sum([100 * ((x[i]+1) ** 2 - (x[i + 1]+1)) ** 2 + x[i] ** 2 for i in range(x.shape[0] - 1)])
