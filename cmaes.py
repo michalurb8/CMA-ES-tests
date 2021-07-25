@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from typing import List, Tuple
+from sys import stdout
 
 _EPS = 1e-8
 _MEAN_MAX = 1e32
@@ -23,7 +24,7 @@ class CMAES:
         # Initial point
         self._xmean = 5 * np.random.rand(self._dimension)
         # Step size
-        self._sigma = 1
+        self._sigma = 5
         self._stop_value = 1e-10
         self._stop_after = 100 * self._dimension ** 2
 
@@ -72,6 +73,8 @@ class CMAES:
     def generation_loop(self):
         assert self._results == [], "One instance can only run once."
         for gen_count in range(self._stop_after):
+            stdout.write(f"\rGeneration: {self._generation} / {self._stop_after}")
+            stdout.flush()
             self._B, self._D = self._eigen_decomposition()
             solutions = []
             value_break_condition = False
@@ -127,7 +130,11 @@ class CMAES:
         self._xmean += self._sigma * y_w
 
         if self._visuals == True:
-            plt.title = str(self._generation)
+            title = "gen " + str(self._generation)
+            title += "mode: " + str(self._repair_mode)
+            title += "lambda: " + str(self._lambda)
+            title += "dim: " + str(self._dimension)
+            plt.title(title)
             plt.axis('equal')
             plt.axvline(0, linewidth=6, c='red')
             plt.axhline(0, linewidth=6, c='red')
@@ -143,7 +150,7 @@ class CMAES:
             plt.scatter(x1, x2, s=20)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
-            plt.pause(0.01)
+            plt.pause(0.3)
             plt.clf()
             plt.cla()
 
@@ -184,6 +191,8 @@ class CMAES:
             return rastrigin(x)
         elif self._fitness == 'rosenbrock':
             return rosenbrock(x)
+        elif self._fitness == 'ackley':
+            return ackley(x)
         raise Exception('Invalid objective function chosen')
 
     def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
@@ -262,3 +271,8 @@ def rastrigin(x: np.ndarray) -> float:
 
 def rosenbrock(x: np.ndarray) -> float:
     return sum([100 * ((x[i]+1) ** 2 - (x[i + 1]+1)) ** 2 + x[i] ** 2 for i in range(x.shape[0] - 1)])
+
+def ackley(x: np.ndarray) -> float:
+    exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x)))
+    exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x)))
+    return exp1 + exp2 + 20 + np.e

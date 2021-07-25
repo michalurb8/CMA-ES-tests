@@ -2,12 +2,13 @@ from cmaes import CMAES
 import numpy as np
 import matplotlib.pyplot as plt
 
-_TARGETS = np.array([10 ** i for i in range(-10, 10)])
+_TARGETS = np.array([10 ** i for i in range(-10, 1)])
 
 
-def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int = 100, objectives: list = None, lambda_arg: int = None, visuals: bool = False):
+def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visuals: bool = False):
     if objectives is None:
-            objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock']
+            objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock', 'ackley']
+            objectives = ['rastrigin']
 
     ecdf_list = []
     evals_per_gen = None
@@ -16,7 +17,8 @@ def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int 
     print(f"mode: {mode}; dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}")
     for objective in objectives:
         print("    Currently running:", objective)
-        for _ in range(iterations):
+        for iteration in range(iterations):
+            print(f"Iteration: {iteration} / {iterations}")
             algo = CMAES(objective, dimensions, mode, repair_mode, lambda_arg, visuals)
             algo.generation_loop()
             single_ecdf, e = algo.ecdf(_TARGETS)
@@ -44,18 +46,19 @@ def _get_ecdf_data(ecdf_list: list, evals_per_gen: int):
     return xaxis, ecdf_result
 
 def all_test(dimensions: int, iterations: int, lbd: int):
-    runs = [
+    runsc = [
         ('normal', None, False),
         ('constrained', 'reflection', False),
         ('constrained', 'projection', False),
         ('constrained', 'resampling', False)
     ]
     ecdfs = []
-    for mode, rmode, v in runs:
+    for mode, rmode, v in runsc:
         ecdf = evaluate(mode, rmode, dimensions, iterations, None, lbd, False)
         ecdfs.append((ecdf[0], ecdf[1], str(rmode)))
     for ecdf in ecdfs:
-        plt.scatter(ecdf[0], ecdf[1], label=ecdf[2])
+        plt.plot(ecdf[0], ecdf[1], label=ecdf[2])
+    plt.ylim(0,1)
     plt.legend()
     plt.grid()
     plt.show()
