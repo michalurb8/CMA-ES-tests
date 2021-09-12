@@ -13,6 +13,9 @@ parser.add_argument('-d', '--dimensions', type=int, default=10,
 parser.add_argument('-l', '--lbd', type=int, default=None,
                     help='Population size.')
 
+parser.add_argument('-v', '--vis', default=False,
+                    help='Turns on visualisation.', action='store_true')
+
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.all_test(args.dimensions, args.iterations, args.lbd)
+    Evaluator.all_test(args.dimensions, args.iterations, args.lbd, args.vis)

@@ -2,11 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from typing import List, Tuple
-from sys import stdout
+
 
 _EPS = 1e-8
 _MEAN_MAX = 1e32
 _SIGMA_MAX = 1e32
+
+_DELAY = 0.3
 
 infp = float('inf')
 infn = float('-inf')
@@ -26,7 +28,7 @@ class CMAES:
         # Step size
         self._sigma = 5
         self._stop_value = 1e-10
-        self._stop_after = 100 * self._dimension ** 2
+        self._stop_after = (self._dimension - 1) * 150
 
         # Population size
         if lambda_arg == None:
@@ -73,8 +75,6 @@ class CMAES:
     def generation_loop(self):
         assert self._results == [], "One instance can only run once."
         for gen_count in range(self._stop_after):
-            stdout.write(f"\rGeneration: {self._generation} / {self._stop_after}")
-            stdout.flush()
             self._B, self._D = self._eigen_decomposition()
             solutions = []
             value_break_condition = False
@@ -131,9 +131,9 @@ class CMAES:
 
         if self._visuals == True:
             title = "gen " + str(self._generation)
-            title += "mode: " + str(self._repair_mode)
-            title += "lambda: " + str(self._lambda)
-            title += "dim: " + str(self._dimension)
+            title += ", mode: " + str(self._repair_mode)
+            title += ", lambda: " + str(self._lambda)
+            title += ", dim: " + str(self._dimension)
             plt.title(title)
             plt.axis('equal')
             plt.axvline(0, linewidth=6, c='red')
@@ -150,7 +150,7 @@ class CMAES:
             plt.scatter(x1, x2, s=20)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
-            plt.pause(0.3)
+            plt.pause(_DELAY)
             plt.clf()
             plt.cla()
 
