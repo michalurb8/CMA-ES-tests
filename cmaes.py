@@ -70,6 +70,7 @@ class CMAES:
         self._generation = 0
 
         self._results = []
+        self._sigma_history = []
         self._best_value = infp
 
     def generation_loop(self):
@@ -99,6 +100,7 @@ class CMAES:
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
             self.tell(solutions)
             self._results.append((gen_count, self._best_value))
+            self._sigma_history.append((gen_count, self._sigma))
 
     def _sample_solution(self) -> np.ndarray:
         std = np.random.standard_normal(self._dimension)
@@ -119,7 +121,7 @@ class CMAES:
         self._generation += 1
         solutions.sort(key=lambda solution: solution[1])
 
-        # ~ N(m, σ^2 C)
+        # ~ N(m, sigma^2 C)
         population = np.array([s[0] for s in solutions])
         # ~ N(0, C)
         y_k = (population - self._xmean) / self._sigma
@@ -195,7 +197,12 @@ class CMAES:
             return ackley(x)
         raise Exception('Invalid objective function chosen')
 
+    def sigma_history(self) -> Tuple[List[float], int]:
+        assert self._sigma_history != [], "Can't get sigma history, must run the algorithm first"
+        return self._sigma_history
+
     def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
+        #based on algorithm results, return ecdf curves and evals_per_iter
         assert self._results != [], "Can't plot results, must run the algorithm first"
         ecdf = []
         for result in self._results:
@@ -204,17 +211,10 @@ class CMAES:
                 if result[1] <= target:
                     passed += 1
             ecdf.append(passed / len(targets))
-        return (ecdf, self._lambda)
-
-    def plot_result(self):
-        assert self._results != [], "Can't plot results, must run the algorithm first"
-        x_axis = [it for (it, _) in self._results]
-        y_axis = [value for (_, value) in self._results]
-        plt.xlabel('Iterations')
-        plt.ylabel('Best objective value')
-        plt.yscale('log')
-        plt.grid()
-        plt.scatter(x_axis, y_axis)
+        return ecdf
+    
+    def evals_per_iteration(self) -> int:
+        return self._lambda
 
     def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str):
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
@@ -256,14 +256,11 @@ def felli(x: np.ndarray) -> float:
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
     return float(np.matmul(arr, x ** 2))
 
-
 def quadratic(x: np.ndarray) -> float:
     return float(np.dot(x, x))
 
-
 def bent_cigar(x: np.ndarray) -> float:
     return x[0] ** 2 + 1e6 * np.sum(x[1:] ** 2)
-
 
 def rastrigin(x: np.ndarray) -> float:
     return float(np.sum(x ** 2 + -10 * (np.cos(2 * np.pi * x)) + 10))

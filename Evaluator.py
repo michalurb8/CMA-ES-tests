@@ -5,13 +5,14 @@ from sys import stdout
 
 _TARGETS = np.array([10 ** i for i in range(-10, 1)])
 
-
 def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visual: bool = False):
+    # return formatted ecdf data and formatted sigma data
+
     if objectives is None:
             # objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock', 'ackley']
-            objectives = ['quadratic', 'felli', 'rastrigin', 'rosenbrock']
-
+            objectives = ['quadratic']
     ecdf_list = []
+    sigmas_list = []
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
@@ -23,12 +24,12 @@ def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int 
             stdout.flush()
             algo = CMAES(objective, dimensions, mode, repair_mode, lambda_arg, visual)
             algo.generation_loop()
-            single_ecdf, e = algo.ecdf(_TARGETS)
-            ecdf_list.append(single_ecdf)
             if evals_per_gen == None:
-                evals_per_gen = e
+                evals_per_gen = algo.evals_per_iteration()
             else:
-                assert evals_per_gen == e, "Lambda different for same settings"
+                assert evals_per_gen == algo.evals_per_iteration, "Lambda different for same settings"
+            ecdf_list.append(algo.ecdf(_TARGETS))
+            sigmas_list.append(algo.sigma_history())
         print()
 
     return _get_ecdf_data(ecdf_list, evals_per_gen)
@@ -50,15 +51,17 @@ def _get_ecdf_data(ecdf_list: list, evals_per_gen: int):
 
 def all_test(dimensions: int, iterations: int, lbd: int, visual: bool):
     runsc = [
-        ('normal', None, True),
-        ('constrained', 'reflection', True),
-        ('constrained', 'projection', False),
-        ('constrained', 'resampling', False)
+        ('normal', None),
+        ('constrained', 'reflection'),
+        ('constrained', 'projection'),
+        ('constrained', 'resampling')
     ]
     ecdfs = []
-    for mode, rmode, _ in runsc:
+    sigmas = []
+    for mode, rmode in runsc:
         ecdf = evaluate(mode, rmode, dimensions, iterations, None, lbd, visual)
         ecdfs.append((ecdf[0], ecdf[1], str(rmode)))
+        sigmas.append()
     for ecdf in ecdfs:
         plt.plot(ecdf[0], ecdf[1], label=ecdf[2])
     plt.ylim(0,1)
