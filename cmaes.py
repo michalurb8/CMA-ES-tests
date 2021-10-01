@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple
 
 
-_EPS = 1e-8
-_MEAN_MAX = 1e32
-_SIGMA_MAX = 1e32
+_EPS = 1e-10
+_MEAN_MAX = 1e30
+_SIGMA_MAX = 1e30
 
-_DELAY = 0.3
+_DELAY = 0.2
 
 infp = float('inf')
 infn = float('-inf')
@@ -24,15 +24,15 @@ class CMAES:
         self._repair_mode = repair_mode
         self._visuals = visuals
         # Initial point
-        self._xmean = 5 * np.random.rand(self._dimension)
+        self._xmean = 0.05 * np.random.rand(self._dimension)
         # Step size
-        self._sigma = 5
-        self._stop_value = 1e-10
-        self._stop_after = (self._dimension - 1) * 150
+        self._sigma = 0.3
+        self._stop_value = -1 # 1e-20
+        self._stop_after = 100
 
         # Population size
         if lambda_arg == None:
-            self._lambda = 24 + int(3 * np.log(self._dimension))
+            self._lambda = 4 + int(3 * np.log(self._dimension))
         else:
             assert lambda_arg > 3, "Population size must be greater than 3"
             self._lambda = lambda_arg
@@ -80,6 +80,7 @@ class CMAES:
             solutions = []
             value_break_condition = False
 
+            self._sigma_history.append(self._sigma)
             for _ in range(self._lambda):
                 x = self._sample_solution()
                 if self._mode != "normal" and not self._check_point(x):
@@ -100,7 +101,6 @@ class CMAES:
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
             self.tell(solutions)
             self._results.append((gen_count, self._best_value))
-            self._sigma_history.append((gen_count, self._sigma))
 
     def _sample_solution(self) -> np.ndarray:
         std = np.random.standard_normal(self._dimension)
