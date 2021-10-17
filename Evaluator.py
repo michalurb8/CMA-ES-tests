@@ -6,24 +6,24 @@ from sys import stdout
 _TARGETS = np.array([10 ** i for i in range(-20, 2)])
 # _TARGETS = np.array([10 ** (i/8.0) for i in range(-16, 17)])
 
-def evaluate(mode: str, repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visual: bool = False):
+def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visual: bool = False):
     # return formatted ecdf data and formatted sigma data
 
     if objectives is None:
             # objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock', 'ackley']
-            objectives = ['quadratic']
+            objectives = ['felli']
     ecdf_list = []
     sigmas_list = []
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
-    print(f"mode: {mode}; dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}")
+    print(f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}")
     for objective in objectives:
         print("    Currently running:", objective)
         for iteration in range(iterations):
             stdout.write(f"\rIteration: {1+iteration} / {iterations}")
             stdout.flush()
-            algo = CMAES(objective, dimensions, mode, repair_mode, lambda_arg, visual)
+            algo = CMAES(objective, dimensions, repair_mode, lambda_arg, visual)
             algo.generation_loop()
             if evals_per_gen == None:
                 evals_per_gen = algo.evals_per_iteration()
@@ -64,27 +64,34 @@ def _format_sigmas(sigmas_list: list, evals_per_gen: int):
 
 def all_test(dimensions: int, iterations: int, lbd: int, visual: bool):
     runsc = [
-        ('normal', None, False),
-        ('constrained', 'reflection', True),
-        ('constrained', 'projection', True),
-        ('constrained', 'resampling', True)
+        (None, False),
+        ('reflection', True),
+        ('projection', True),
+        ('resampling', True)
     ]
     ecdfs = []
     sigmas = []
-    for mode, rmode, v in runsc:
-        ecdf, sigma = evaluate(mode, rmode, dimensions, iterations, None, lbd, visual and v)
+    for rmode, v in runsc:
+        ecdf, sigma = evaluate(rmode, dimensions, iterations, None, lbd, visual and v)
         ecdfs.append((ecdf[0], ecdf[1], str(rmode)))
         sigmas.append((sigma[0], sigma[1], str(rmode)))
-    fig, (ecdf_ax, sigma_ax) = plt.subplots(2, sharex=True)
-    ecdf_ax.grid()
-    sigma_ax.grid()
+
+    lambda_prompt = str(lbd) if lbd is not None else "default"
+    title = f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}"
+    ecdf_ax = plt.subplot(211)
+    plt.title(title, fontsize=18)
+    plt.setp(ecdf_ax.get_xticklabels(), fontsize = 8)
     for ecdf in ecdfs:
-        ecdf_ax.plot(ecdf[0], ecdf[1], label=ecdf[2])
+        plt.plot(ecdf[0], ecdf[1], label=ecdf[2])
+    plt.legend()
+    
+    sigma_ax = plt.subplot(212, sharex=ecdf_ax)
+    plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for sigma in sigmas:
-        sigma_ax.plot(sigma[0], sigma[1], label=sigma[2])
-    ecdf_ax.legend()
-    ecdf_ax.set_title("ECDF_curves", loc="left")
-    ecdf_ax.set_ylim(0,1)
-    sigma_ax.legend()
-    sigma_ax.set_title("sigma_curves", loc="left")
+        plt.plot(sigma[0], sigma[1], label=sigma[2])
+    plt.yscale("log")
+    # ecdf_ax.ylabel("ECDF_curves", loc="left")
+    # ecdf_ax.set_ylim(0,1)
+    # sigma_ax.legend()
+    # sigma_ax.xlabel("sigma_curves", loc="left")
     plt.show()

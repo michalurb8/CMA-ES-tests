@@ -8,27 +8,36 @@ _EPS = 1e-10
 _MEAN_MAX = 1e30
 _SIGMA_MAX = 1e30
 
-_DELAY = 0.2
+_DELAY = 0.1
 
 infp = float('inf')
 infn = float('-inf')
 _RESAMPLING_LIMIT = 10
 
 class CMAES:
-
-    def __init__(self, objective_function: str, dimensions: int, mode: str, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
+    """
+    Parameters
+    ----------
+    objective_function: str
+        Chosen from: quadratic, felli, bent, rastrigin, rosenbrock, ackley
+    dimensions : int
+        Problem dimensionality
+    repair_mode : str
+        Chosen from: None, projection, reflection, resampling
+        #TODO
+    """
+    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
         self._fitness = objective_function
         self._dimension = dimensions
-        self._bounds = [(-0.1, infp) for _ in range(self._dimension)]
-        self._mode = mode
+        self._bounds = [(-10, 100) for _ in range(self._dimension)]
         self._repair_mode = repair_mode
         self._visuals = visuals
         # Initial point
-        self._xmean = 0.05 * np.random.rand(self._dimension)
+        self._xmean = 5*np.random.standard_normal(self._dimension)
         # Step size
-        self._sigma = 0.3
+        self._sigma = 0.05
         self._stop_value = -1 # 1e-20
-        self._stop_after = 100
+        self._stop_after = 2000
 
         # Population size
         if lambda_arg == None:
@@ -83,7 +92,7 @@ class CMAES:
             self._sigma_history.append(self._sigma)
             for _ in range(self._lambda):
                 x = self._sample_solution()
-                if self._mode != "normal" and not self._check_point(x):
+                if not self._check_point(x):
                     self._repair(x, self._bounds, self._repair_mode)
 
                 value = self.objective(x)
@@ -133,7 +142,7 @@ class CMAES:
 
         if self._visuals == True:
             title = "gen " + str(self._generation)
-            title += ", mode: " + str(self._repair_mode)
+            title += ", repair_mode: " + str(self._repair_mode)
             title += ", lambda: " + str(self._lambda)
             title += ", dim: " + str(self._dimension)
             plt.title(title)
@@ -164,7 +173,9 @@ class CMAES:
                         np.matmul(C_2, y_w))
         self._path_sigma = (1 - self._time_sigma) * self._path_sigma + _path_sigma_delta
 
-        self._sigma *= np.exp((self._time_sigma / self._damping) *
+        # print(" NORM: ", np.linalg.norm(self._path_sigma))
+
+        self._sigma *= np.exp( (self._time_sigma / (self._damping + _EPS)) *
                         (np.linalg.norm(self._path_sigma) / self._chi - 1))
         self._sigma = min(self._sigma, _SIGMA_MAX)
 
@@ -218,7 +229,9 @@ class CMAES:
 
     def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str):
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
-        if repair_mode == 'reflection':
+        if repair_mode == None:
+            return
+        elif repair_mode == 'reflection':
             for i in range(len(x)):
                 while x[i] < bounds[i][0] or x[i] > bounds[i][1]:
                     if x[i] < bounds[i][0]:
