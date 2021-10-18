@@ -29,15 +29,20 @@ class CMAES:
     def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
         self._fitness = objective_function
         self._dimension = dimensions
-        self._bounds = [(-10, 100) for _ in range(self._dimension)]
+        self._bounds = [(-0.001, 100) for _ in range(self._dimension)]
+        # self._bounds = []
+        # wall = int(1 * self._dimension)
+        # assert wall <= self._dimension and wall >= 0, "number of wall dimensions is incorrect"
+        # self._bounds.extend([(-0.001, 100) for _ in range(wall)])
+        # self._bounds.extend([(-50, 50) for _ in range(self._dimension - wall)])
         self._repair_mode = repair_mode
         self._visuals = visuals
         # Initial point
-        self._xmean = 5*np.random.standard_normal(self._dimension)
+        self._xmean = 30 * np.ones(self._dimension) # np.random.standard_normal(self._dimension)
         # Step size
-        self._sigma = 0.05
+        self._sigma = 1
         self._stop_value = -1 # 1e-20
-        self._stop_after = 2000
+        self._stop_after = 200
 
         # Population size
         if lambda_arg == None:
@@ -80,6 +85,7 @@ class CMAES:
 
         self._results = []
         self._sigma_history = []
+        self._C_history = []
         self._best_value = infp
 
     def generation_loop(self):
@@ -90,6 +96,7 @@ class CMAES:
             value_break_condition = False
 
             self._sigma_history.append(self._sigma)
+            self._C_history.append(np.linalg.det(self._C))
             for _ in range(self._lambda):
                 x = self._sample_solution()
                 if not self._check_point(x):
@@ -211,6 +218,10 @@ class CMAES:
     def sigma_history(self) -> Tuple[List[float], int]:
         assert self._sigma_history != [], "Can't get sigma history, must run the algorithm first"
         return self._sigma_history
+
+    def C_history(self) -> Tuple[List[float], int]:
+        assert self._C_history != [], "Can't get C history, must run the algorithm first"
+        return self._C_history
 
     def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
         #based on algorithm results, return ecdf curves and evals_per_iter

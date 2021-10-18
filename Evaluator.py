@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdout
 
-_TARGETS = np.array([10 ** i for i in range(-20, 2)])
+_TARGETS = np.array([10 ** i for i in range(-10, 2)])
 # _TARGETS = np.array([10 ** (i/8.0) for i in range(-16, 17)])
 
 def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visual: bool = False):
@@ -11,9 +11,10 @@ def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objec
 
     if objectives is None:
             # objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock', 'ackley']
-            objectives = ['felli']
+            objectives = ['quadratic']
     ecdf_list = []
     sigmas_list = []
+    C_list = []
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
@@ -31,11 +32,13 @@ def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objec
                 assert evals_per_gen == algo.evals_per_iteration(), "Lambda different for same settings"
             ecdf_list.append(algo.ecdf(_TARGETS))
             sigmas_list.append(algo.sigma_history())
+            C_list.append(algo.C_history())
         print()
 
     formatted_ecdfs = _format_ecdfs(ecdf_list, evals_per_gen)
     formatted_sigmas = _format_sigmas(sigmas_list, evals_per_gen)
-    return (formatted_ecdfs, formatted_sigmas)
+    formatted_C = _format_C(C_list, evals_per_gen)
+    return (formatted_ecdfs, formatted_sigmas, formatted_C)
 
 
 def _format_ecdfs(ecdf_list: list, evals_per_gen: int):
@@ -62,36 +65,56 @@ def _format_sigmas(sigmas_list: list, evals_per_gen: int):
     x_axis = [x*evals_per_gen for x in range(max_length)]
     return x_axis, y_axis
 
+def _format_C(C_list: list, evals_per_gen: int):
+    max_length = len(C_list[0])
+    for i in C_list:
+        assert len(i) == max_length, "Runs are of different length, cannot take average of det(C)"
+    y_axis = []
+    for i in range(max_length):
+        y_axis.append(sum([det[i] for det in C_list if det[i] is not None]) / len(C_list))
+    x_axis = [x*evals_per_gen for x in range(max_length)]
+    return x_axis, y_axis
+
 def all_test(dimensions: int, iterations: int, lbd: int, visual: bool):
     runsc = [
         (None, False),
-        ('reflection', True),
-        ('projection', True),
+        ('reflection', False),
+        ('projection', False),
         ('resampling', True)
     ]
     ecdfs = []
     sigmas = []
+    Cs = []
     for rmode, v in runsc:
-        ecdf, sigma = evaluate(rmode, dimensions, iterations, None, lbd, visual and v)
+        ecdf, sigma, C = evaluate(rmode, dimensions, iterations, None, lbd, visual and v)
         ecdfs.append((ecdf[0], ecdf[1], str(rmode)))
         sigmas.append((sigma[0], sigma[1], str(rmode)))
+        Cs.append((C[0], C[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
     title = f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}"
-    ecdf_ax = plt.subplot(211)
+    ecdf_ax = plt.subplot(311)
     plt.title(title, fontsize=18)
-    plt.setp(ecdf_ax.get_xticklabels(), fontsize = 8)
+    plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf in ecdfs:
         plt.plot(ecdf[0], ecdf[1], label=ecdf[2])
     plt.legend()
+    plt.ylabel("ECDF values")
+    plt.ylim(0,1)
     
-    sigma_ax = plt.subplot(212, sharex=ecdf_ax)
-    plt.setp(ecdf_ax.get_xticklabels(), visible = False)
+    sigma_ax = plt.subplot(312, sharex=ecdf_ax)
+    plt.setp(sigma_ax.get_xticklabels(), visible = False)
     for sigma in sigmas:
         plt.plot(sigma[0], sigma[1], label=sigma[2])
     plt.yscale("log")
-    # ecdf_ax.ylabel("ECDF_curves", loc="left")
-    # ecdf_ax.set_ylim(0,1)
-    # sigma_ax.legend()
-    # sigma_ax.xlabel("sigma_curves", loc="left")
+    plt.ylabel("sigma values")
+
+    C_ax = plt.subplot(313, sharex=ecdf_ax)
+    plt.setp(C_ax.get_xticklabels(), fontsize = 12)
+    for C in Cs:
+        plt.plot(C[0], C[1], label=C[2])
+    plt.yscale("log")
+    plt.ylabel("det(C) values")
+    plt.xlabel("# of function evaluations", fontsize=12)
+
     plt.show()
