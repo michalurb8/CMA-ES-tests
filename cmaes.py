@@ -28,25 +28,36 @@ class CMAES:
     """
     def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
         self._fitness = objective_function
+        assert dimensions > 0, "Number of dimensions must be greater than 0"
         self._dimension = dimensions
-        self._bounds = [(-0.001, 100) for _ in range(self._dimension)]
+
+        # SET LOWER BOUNDS TO BE EACH OF DIFFERENT DISTANCE FROM THE ORIGIN (CHOOSE FROM 3 OPTIONS)
         # self._bounds = []
-        # wall = int(1 * self._dimension)
+        # for i in range(self._dimension):
+        #     self._bounds.append((-10**((i-8)/2), 1000))
+
+        # SET LOWER BOUNDS TO BE EACH THE SAME VALUE (CHOOSE FROM 3 OPTIONS)
+        self._bounds = [(-0.1,100) for _ in range(self._dimension)]
+
+        # SET SOME PERCENT OF LOWER BOUNDS TO SOME VALUE, THE REST TO ANOTHER VALUE (CHOOSE FROM 3 OPTIONS)
+        # self._bounds = []
+        # wall = int(0.5 * self._dimension)
         # assert wall <= self._dimension and wall >= 0, "number of wall dimensions is incorrect"
-        # self._bounds.extend([(-0.001, 100) for _ in range(wall)])
-        # self._bounds.extend([(-50, 50) for _ in range(self._dimension - wall)])
+        # self._bounds.extend([(-0.1, 100) for _ in range(wall)])
+        # self._bounds.extend([(-100, 100) for _ in range(self._dimension - wall)])
+
         self._repair_mode = repair_mode
         self._visuals = visuals
         # Initial point
-        self._xmean = 30 * np.ones(self._dimension) # np.random.standard_normal(self._dimension)
+        self._xmean = 30 * np.ones(self._dimension)
         # Step size
         self._sigma = 1
-        self._stop_value = -1 # 1e-20
-        self._stop_after = 200
+        self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
+        self._stop_after = 300 # Set manually
 
         # Population size
         if lambda_arg == None:
-            self._lambda = 4 + int(3 * np.log(self._dimension))
+            self._lambda = 4 * self._dimension
         else:
             assert lambda_arg > 3, "Population size must be greater than 3"
             self._lambda = lambda_arg
@@ -92,11 +103,12 @@ class CMAES:
         assert self._results == [], "One instance can only run once."
         for gen_count in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
+
+            self._C_history.append(np.matmul(self._D, np.ones(self._dimension)))
+            self._sigma_history.append(self._sigma)
+
             solutions = []
             value_break_condition = False
-
-            self._sigma_history.append(self._sigma)
-            self._C_history.append(np.linalg.det(self._C))
             for _ in range(self._lambda):
                 x = self._sample_solution()
                 if not self._check_point(x):

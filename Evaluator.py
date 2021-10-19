@@ -3,15 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdout
 
-_TARGETS = np.array([10 ** i for i in range(-10, 2)])
-# _TARGETS = np.array([10 ** (i/8.0) for i in range(-16, 17)])
+_TARGETS = np.array([10 ** i for i in range(-10, 10)])
 
 def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visual: bool = False):
-    # return formatted ecdf data and formatted sigma data
-
+    # reapetedly run the algorithm, return results: ECDF values, sigma values, det(C) values
     if objectives is None:
             # objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock', 'ackley']
-            objectives = ['quadratic']
+            objectives = ['felli']
     ecdf_list = []
     sigmas_list = []
     C_list = []
@@ -75,7 +73,7 @@ def _format_C(C_list: list, evals_per_gen: int):
     x_axis = [x*evals_per_gen for x in range(max_length)]
     return x_axis, y_axis
 
-def all_test(dimensions: int, iterations: int, lbd: int, visual: bool):
+def run_test(dimensions: int, iterations: int, lbd: int, visual: bool):
     runsc = [
         (None, False),
         ('reflection', False),
@@ -98,7 +96,7 @@ def all_test(dimensions: int, iterations: int, lbd: int, visual: bool):
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf in ecdfs:
         plt.plot(ecdf[0], ecdf[1], label=ecdf[2])
-    plt.legend()
+    plt.legend(fontsize=12)
     plt.ylabel("ECDF values")
     plt.ylim(0,1)
     

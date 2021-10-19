@@ -18,4 +18,4 @@ parser.add_argument('-v', '--vis', default=False,
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.all_test(args.dimensions, args.iterations, args.lbd, args.vis)
+    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.vis)
