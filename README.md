@@ -1,5 +1,5 @@
 # AMHE-CMA-ES
-An implementation of CMA-ES algorithm for testing box constraints repair methods.
+An implementation of CMA-ES algorithm for testing bound constraint repair methods.
 
 Required Python3 libraries:
 numpy 1.20.2
