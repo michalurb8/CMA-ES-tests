@@ -1,4 +1,5 @@
 from cmaes import CMAES
+from typing import List, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 from sys import stdout
@@ -6,13 +7,13 @@ from sys import stdout
 _TARGETS = np.array([10 ** i for i in range(-10, 10)])
 
 def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objectives: list = None, lambda_arg: int = None, visual: bool = False):
-    # reapetedly run the algorithm, return results: ECDF values, sigma values, det(C) values
+    # reapetedly run the algorithm, return results: ECDF values, sigma values, sigma difference values
     if objectives is None:
             # objectives = ['quadratic', 'felli', 'bent', 'rastrigin', 'rosenbrock', 'ackley']
             objectives = ['felli']
     ecdf_list = []
     sigmas_list = []
-    C_list = []
+    diffs_list = []
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
@@ -30,16 +31,21 @@ def evaluate(repair_mode: str, dimensions: int = 10, iterations: int = 10, objec
                 assert evals_per_gen == algo.evals_per_iteration(), "Lambda different for same settings"
             ecdf_list.append(algo.ecdf(_TARGETS))
             sigmas_list.append(algo.sigma_history())
-            C_list.append(algo.C_history())
+            diffs_list.append(algo.diff_history())
         print()
 
     formatted_ecdfs = _format_ecdfs(ecdf_list, evals_per_gen)
     formatted_sigmas = _format_sigmas(sigmas_list, evals_per_gen)
-    formatted_C = _format_C(C_list, evals_per_gen)
-    return (formatted_ecdfs, formatted_sigmas, formatted_C)
+    formatted_diff = _format_sigma_differences(diffs_list, evals_per_gen)
+    return (formatted_ecdfs, formatted_sigmas, formatted_diff)
 
 
 def _format_ecdfs(ecdf_list: list, evals_per_gen: int):
+    """
+    _format_ecdfs() takes data collected from multiple algorithm runs.
+    Then, an average and horizontal axis scaling are applied.
+    The return value is a tuple of two list, each corresponds to a plot axis, ready to be plotted.
+    """
     max_length = max([len(ecdf) for ecdf in ecdf_list])
 
     for ecdf in ecdf_list:  # fill ecdf data with 1s so that all lists are of equal lengths
@@ -54,6 +60,11 @@ def _format_ecdfs(ecdf_list: list, evals_per_gen: int):
     return x_axis, y_axis
 
 def _format_sigmas(sigmas_list: list, evals_per_gen: int):
+    """
+    _format_sigmas() takes data collected from multiple algorithm runs.
+    Then, an average and horizontal axis scaling are applied.
+    The return value is a tuple of two list, each corresponds to a plot axis, ready to be plotted.
+    """
     max_length = len(sigmas_list[0])
     for i in sigmas_list:
         assert len(i) == max_length, "Runs are of different length, cannot take average of sigma"
@@ -63,31 +74,31 @@ def _format_sigmas(sigmas_list: list, evals_per_gen: int):
     x_axis = [x*evals_per_gen for x in range(max_length)]
     return x_axis, y_axis
 
-def _format_C(C_list: list, evals_per_gen: int):
-    max_length = len(C_list[0])
-    for i in C_list:
-        assert len(i) == max_length, "Runs are of different length, cannot take average of det(C)"
+def _format_sigma_differences(diff_list: list, evals_per_gen: int):
+    max_length = len(diff_list[0])
+    for i in diff_list:
+        assert len(i) == max_length, "Runs are of different length, cannot take average of sigma"
     y_axis = []
     for i in range(max_length):
-        y_axis.append(sum([det[i] for det in C_list if det[i] is not None]) / len(C_list))
+        y_axis.append(sum([diffs[i] for diffs in diff_list if diffs[i] is not None]) / len(diff_list))
     x_axis = [x*evals_per_gen for x in range(max_length)]
     return x_axis, y_axis
 
-def run_test(dimensions: int, iterations: int, lbd: int, visual: bool):
+def run_test(dimensions: int = 10, iterations: int = 10, lbd: int = None, visual: bool = False):
     runsc = [
-        (None, False),
-        ('reflection', False),
-        ('projection', False),
+        (None,         True),
+        ('reflection', True),
+        ('projection', True),
         ('resampling', True)
     ]
     ecdfs = []
     sigmas = []
-    Cs = []
+    sigma_diffs = []
     for rmode, v in runsc:
-        ecdf, sigma, C = evaluate(rmode, dimensions, iterations, None, lbd, visual and v)
+        ecdf, sigma, sigma_diff = evaluate(rmode, dimensions, iterations, None, lbd, visual and v)
         ecdfs.append((ecdf[0], ecdf[1], str(rmode)))
         sigmas.append((sigma[0], sigma[1], str(rmode)))
-        Cs.append((C[0], C[1], str(rmode)))
+        sigma_diffs.append((sigma_diff[0], sigma_diff[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
     title = f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}"
@@ -107,12 +118,15 @@ def run_test(dimensions: int, iterations: int, lbd: int, visual: bool):
     plt.yscale("log")
     plt.ylabel("sigma values")
 
-    C_ax = plt.subplot(313, sharex=ecdf_ax)
-    plt.setp(C_ax.get_xticklabels(), fontsize = 12)
-    for C in Cs:
-        plt.plot(C[0], C[1], label=C[2])
-    plt.yscale("log")
-    plt.ylabel("det(C) values")
+    diff_ax = plt.subplot(313, sharex=ecdf_ax)
+    plt.setp(diff_ax.get_xticklabels(), fontsize = 12)
+    for diff in sigma_diffs:
+        plt.plot(diff[0], diff[1], label=diff[2])
+    # plt.yscale("log")
+    plt.ylabel("sigma difference values")
     plt.xlabel("# of function evaluations", fontsize=12)
 
     plt.show()
+
+if __name__ == "__main__":
+    run_test()

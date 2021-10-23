@@ -14,7 +14,7 @@ parser.add_argument('-l', '--lbd', type=int, default=None,
                     help='Population size.')
 
 parser.add_argument('-v', '--vis', default=False,
-                    help='Turns on visualisation.', action='store_true')
+                    help='Turn on visualisation.', action='store_true')
 
 if __name__ == '__main__':
     args = parser.parse_args()

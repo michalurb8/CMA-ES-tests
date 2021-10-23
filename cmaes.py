@@ -1,14 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 from typing import List, Tuple
 
-
-_EPS = 1e-10
-_MEAN_MAX = 1e30
+_EPS = 1e-20
+_POINT_MAX = 1e30
 _SIGMA_MAX = 1e30
 
-_DELAY = 0.1
+_DELAY = 0.5
 
 infp = float('inf')
 infn = float('-inf')
@@ -21,43 +19,48 @@ class CMAES:
     objective_function: str
         Chosen from: quadratic, felli, bent, rastrigin, rosenbrock, ackley
     dimensions : int
-        Problem dimensionality
+        Objective function dimensionality.
     repair_mode : str
-        Chosen from: None, projection, reflection, resampling
-        #TODO
+        Bound constraint repair method. Chosen from: None, projection, reflection, resampling.
+    lambda_arg : int
+        Population count. Must be > 3, if set to None, default value will be computed.
+    visuals: bool
+        If True, every algorithm generation will be visualised (only 2 first dimensions)
     """
     def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
-        self._fitness = objective_function
         assert dimensions > 0, "Number of dimensions must be greater than 0"
         self._dimension = dimensions
+        self._fitness = objective_function
+        self._repair_mode = repair_mode
+        self._visuals = visuals
 
-        # SET LOWER BOUNDS TO BE EACH OF DIFFERENT DISTANCE FROM THE ORIGIN (CHOOSE FROM 3 OPTIONS)
+        # OPTION 1: SET LOWER BOUNDS TO BE EACH OF DIFFERENT DISTANCE FROM THE ORIGIN (UNCOMMENT IF NECCESARY)
         # self._bounds = []
         # for i in range(self._dimension):
         #     self._bounds.append((-10**((i-8)/2), 1000))
 
-        # SET LOWER BOUNDS TO BE EACH THE SAME VALUE (CHOOSE FROM 3 OPTIONS)
+        # OPTION 2: SET LOWER BOUNDS TO BE EACH THE SAME VALUE (UNCOMMENT IF NECCESARY)
         self._bounds = [(-0.1,100) for _ in range(self._dimension)]
 
-        # SET SOME PERCENT OF LOWER BOUNDS TO SOME VALUE, THE REST TO ANOTHER VALUE (CHOOSE FROM 3 OPTIONS)
+        # OPTION 3: SET SOME PERCENT OF LOWER BOUNDS TO SOME VALUE, THE REST TO ANOTHER VALUE (UNCOMMENT IF NECCESARY)
         # self._bounds = []
         # wall = int(0.5 * self._dimension)
         # assert wall <= self._dimension and wall >= 0, "number of wall dimensions is incorrect"
         # self._bounds.extend([(-0.1, 100) for _ in range(wall)])
         # self._bounds.extend([(-100, 100) for _ in range(self._dimension - wall)])
 
-        self._repair_mode = repair_mode
-        self._visuals = visuals
         # Initial point
         self._xmean = 30 * np.ones(self._dimension)
         # Step size
         self._sigma = 1
+        # Stop condition
         self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
-        self._stop_after = 300 # Set manually
+        # Run how many iterations
+        self._stop_after = 100 # Set manually. (All runs must be of same length, so it's the only stop condition)
 
         # Population size
         if lambda_arg == None:
-            self._lambda = 4 * self._dimension
+            self._lambda = 4 * self._dimension # default population size
         else:
             assert lambda_arg > 3, "Population size must be greater than 3"
             self._lambda = lambda_arg
@@ -72,8 +75,9 @@ class CMAES:
         self._lr_c_mu = min(1-self._lr_c1, self._lr_c_mu)
 
         # Time constants for cumulation for step-size control
-        self._time_sigma = (self._mu+ 2) / (self._dimension + self._mu+ 5)
+        self._time_sigma = (self._mu + 2) / (self._dimension + self._mu + 5)
         self._damping = 1 + 2 * max(0, np.sqrt((self._mu- 1) / (self._dimension + 1)) - 1) + self._time_sigma
+
         # Time constants for cumulation for rank-one update
         self._time_c = ((4 + self._mu/ self._dimension) /
                         (4 + self._dimension + 2 * self._mu/ self._dimension))
@@ -91,12 +95,15 @@ class CMAES:
         # Covariance matrix
         self._C = np.eye(self._dimension)
 
-        # Parameter for B and D update timing
+        # Store current generation number
         self._generation = 0
 
+        # Store important values at each generation
         self._results = []
         self._sigma_history = []
-        self._C_history = []
+        self._D_history = []
+
+        # Store best found value so far for ECDF calculation
         self._best_value = infp
 
     def generation_loop(self):
@@ -104,8 +111,8 @@ class CMAES:
         for gen_count in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
 
-            self._C_history.append(np.matmul(self._D, np.ones(self._dimension)))
             self._sigma_history.append(self._sigma)
+            self._D_history.append(np.diag(self._D))
 
             solutions = []
             value_break_condition = False
@@ -125,9 +132,9 @@ class CMAES:
             if value_break_condition:
                 break
 
-            # Tell evaluation values.
+            # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
-            self.tell(solutions)
+            self.update(solutions)
             self._results.append((gen_count, self._best_value))
 
     def _sample_solution(self) -> np.ndarray:
@@ -139,12 +146,12 @@ class CMAES:
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
         return B, D
 
-    def tell(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
+    def update(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
         assert len(solutions) == self._lambda, "Must evaluate solutions with length equal to population size."
         for s in solutions:
             assert np.all(
-                np.abs(s[0]) < _MEAN_MAX
-            ), f"Absolute value of all solutions must be less than {_MEAN_MAX} to avoid overflow errors."
+                np.abs(s[0]) < _POINT_MAX
+            ), f"Absolute value of all solutions must be less than {_POINT_MAX} to avoid overflow errors."
 
         self._generation += 1
         solutions.sort(key=lambda solution: solution[1])
@@ -177,7 +184,7 @@ class CMAES:
             plt.scatter(x1, x2, s=50)
             x1 = [point[0] for point in population[:self._mu]]
             x2 = [point[1] for point in population[:self._mu]]
-            plt.scatter(x1, x2, s=20)
+            plt.scatter(x1, x2, s=15)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
             plt.pause(_DELAY)
@@ -191,8 +198,6 @@ class CMAES:
         _path_sigma_delta = (np.sqrt(self._time_sigma * (2 - self._time_sigma) * self._mu) *
                         np.matmul(C_2, y_w))
         self._path_sigma = (1 - self._time_sigma) * self._path_sigma + _path_sigma_delta
-
-        # print(" NORM: ", np.linalg.norm(self._path_sigma))
 
         self._sigma *= np.exp( (self._time_sigma / (self._damping + _EPS)) *
                         (np.linalg.norm(self._path_sigma) / self._chi - 1))
@@ -231,9 +236,16 @@ class CMAES:
         assert self._sigma_history != [], "Can't get sigma history, must run the algorithm first"
         return self._sigma_history
 
-    def C_history(self) -> Tuple[List[float], int]:
-        assert self._C_history != [], "Can't get C history, must run the algorithm first"
-        return self._C_history
+    def diff_history(self) -> Tuple[List[float], int]:
+        assert self._sigma_history != [], "Can't calculate differences, must run the algorithm first"
+        diffs = [0]
+        for i in range(len(self._sigma_history) - 1):
+            diffs.append(self._sigma_history[i+1] / self._sigma_history[i])
+        return diffs
+
+    def D_history(self) -> Tuple[List[float], int]:
+        assert self._D_history != [], "Can't get D history, must run the algorithm first"
+        return self._D_history
 
     def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
         #based on algorithm results, return ecdf curves and evals_per_iter
@@ -300,7 +312,6 @@ def bent_cigar(x: np.ndarray) -> float:
 
 def rastrigin(x: np.ndarray) -> float:
     return float(np.sum(x ** 2 + -10 * (np.cos(2 * np.pi * x)) + 10))
-
 
 def rosenbrock(x: np.ndarray) -> float:
     return sum([100 * ((x[i]+1) ** 2 - (x[i + 1]+1)) ** 2 + x[i] ** 2 for i in range(x.shape[0] - 1)])
