@@ -101,7 +101,7 @@ class CMAES:
         # Store important values at each generation
         self._results = []
         self._sigma_history = []
-        self._D_history = []
+        self._eigen_history = np.zeros((self._stop_after, self._dimension))
 
         # Store best found value so far for ECDF calculation
         self._best_value = infp
@@ -112,7 +112,7 @@ class CMAES:
             self._B, self._D = self._eigen_decomposition()
 
             self._sigma_history.append(self._sigma)
-            self._D_history.append(np.diag(self._D))
+            self._eigen_history[self._generation, :] = np.multiply(self._D, np.ones(self._dimension))
 
             solutions = []
             value_break_condition = False
@@ -243,9 +243,9 @@ class CMAES:
             diffs.append(self._sigma_history[i+1] / self._sigma_history[i])
         return diffs
 
-    def D_history(self) -> Tuple[List[float], int]:
-        assert self._D_history != [], "Can't get D history, must run the algorithm first"
-        return self._D_history
+    def eigen_history(self) -> np.ndarray:
+        assert self._eigen_history != [], "Can't get D history, must run the algorithm first"
+        return self._eigen_history
 
     def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
         #based on algorithm results, return ecdf curves and evals_per_iter
