@@ -34,20 +34,8 @@ class CMAES:
         self._repair_mode = repair_mode
         self._visuals = visuals
 
-        # OPTION 1: SET LOWER BOUNDS TO BE EACH OF DIFFERENT DISTANCE FROM THE ORIGIN (UNCOMMENT IF NECCESARY)
-        # self._bounds = []
-        # for i in range(self._dimension):
-        #     self._bounds.append((-10**((i-8)/2), 1000))
-
-        # OPTION 2: SET LOWER BOUNDS TO BE EACH THE SAME VALUE (UNCOMMENT IF NECCESARY)
+        # Set bounds:
         self._bounds = [(-0.1,100) for _ in range(self._dimension)]
-
-        # OPTION 3: SET SOME PERCENT OF LOWER BOUNDS TO SOME VALUE, THE REST TO ANOTHER VALUE (UNCOMMENT IF NECCESARY)
-        # self._bounds = []
-        # wall = int(0.5 * self._dimension)
-        # assert wall <= self._dimension and wall >= 0, "number of wall dimensions is incorrect"
-        # self._bounds.extend([(-0.1, 100) for _ in range(wall)])
-        # self._bounds.extend([(-100, 100) for _ in range(self._dimension - wall)])
 
         # Initial point
         self._xmean = 30 * np.ones(self._dimension)
@@ -56,7 +44,7 @@ class CMAES:
         # Stop condition
         self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
         # Run how many iterations
-        self._stop_after = 100 # Set manually. (All runs must be of same length, so it's the only stop condition)
+        self._stop_after = 400 # Set manually. (All runs must be of same length, so it's the only stop condition)
 
         # Population size
         if lambda_arg == None:
@@ -238,7 +226,7 @@ class CMAES:
 
     def diff_history(self) -> Tuple[List[float], int]:
         assert self._sigma_history != [], "Can't calculate differences, must run the algorithm first"
-        diffs = [0]
+        diffs = [1]
         for i in range(len(self._sigma_history) - 1):
             diffs.append(self._sigma_history[i+1] / self._sigma_history[i])
         return diffs
