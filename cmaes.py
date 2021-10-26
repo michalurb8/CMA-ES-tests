@@ -44,7 +44,7 @@ class CMAES:
         # Stop condition
         self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
         # Run how many iterations
-        self._stop_after = 400 # Set manually. (All runs must be of same length, so it's the only stop condition)
+        self._stop_after = 500 # Set manually. (All runs must be of same length, so it's the only stop condition)
 
         # Population size
         if lambda_arg == None:
@@ -220,24 +220,31 @@ class CMAES:
             return ackley(x)
         raise Exception('Invalid objective function chosen')
 
-    def sigma_history(self) -> Tuple[List[float], int]:
+    def sigma_history(self) -> List[float]:
         assert self._sigma_history != [], "Can't get sigma history, must run the algorithm first"
         return self._sigma_history
 
-    def diff_history(self) -> Tuple[List[float], int]:
+    def diff_history(self) -> List[float]:
         assert self._sigma_history != [], "Can't calculate differences, must run the algorithm first"
         diffs = [1]
         for i in range(len(self._sigma_history) - 1):
             diffs.append(self._sigma_history[i+1] / self._sigma_history[i])
         return diffs
 
+    def cond_history(self):
+        assert self._eigen_history != [], "Can't compute condition number, must run the algorithm first"
+        greatest = self._eigen_history[:,-1]
+        smallest = self._eigen_history[:,0]
+        result = greatest/smallest
+        return result
+        
     def eigen_history(self) -> np.ndarray:
-        assert self._eigen_history != [], "Can't get D history, must run the algorithm first"
+        assert self._eigen_history != [], "Can't get eigenvalue history, must run the algorithm first"
         return self._eigen_history
 
-    def ecdf(self, targets: np.array) -> Tuple[List[float], int]:
+    def ecdf(self, targets: np.array) -> List[float]:
         #based on algorithm results, return ecdf curves and evals_per_iter
-        assert self._results != [], "Can't plot results, must run the algorithm first"
+        assert self._results != [], "Can't get ecdf values, must run the algorithm first"
         ecdf = []
         for result in self._results:
             passed = 0
