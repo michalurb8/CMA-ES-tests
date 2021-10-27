@@ -6,7 +6,7 @@ _EPS = 1e-20
 _POINT_MAX = 1e30
 _SIGMA_MAX = 1e30
 
-_DELAY = 0.5
+_DELAY = 0.4
 
 infp = float('inf')
 infn = float('-inf')
@@ -18,20 +18,23 @@ class CMAES:
     ----------
     objective_function: str
         Chosen from: quadratic, felli, bent, rastrigin, rosenbrock, ackley
-    dimensions : int
+    dimensions: int
         Objective function dimensionality.
-    repair_mode : str
+    repair_mode: str
         Bound constraint repair method. Chosen from: None, projection, reflection, resampling.
-    lambda_arg : int
+    lambda_arg: int
         Population count. Must be > 3, if set to None, default value will be computed.
+    stop_after: int
+        How many iterations are to be run
     visuals: bool
         If True, every algorithm generation will be visualised (only 2 first dimensions)
     """
-    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, visuals: bool = False):
+    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False):
         assert dimensions > 0, "Number of dimensions must be greater than 0"
         self._dimension = dimensions
         self._fitness = objective_function
         self._repair_mode = repair_mode
+        self._stop_after = stop_after
         self._visuals = visuals
 
         # Set bounds:
@@ -43,8 +46,6 @@ class CMAES:
         self._sigma = 1
         # Stop condition
         self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
-        # Run how many iterations
-        self._stop_after = 500 # Set manually. (All runs must be of same length, so it's the only stop condition)
 
         # Population size
         if lambda_arg == None:
@@ -90,6 +91,7 @@ class CMAES:
         self._results = []
         self._sigma_history = []
         self._eigen_history = np.zeros((self._stop_after, self._dimension))
+        self._mean_history = []
 
         # Store best found value so far for ECDF calculation
         self._best_value = infp
@@ -153,6 +155,7 @@ class CMAES:
         selected = y_k[: self._mu]
         y_w = np.mean(selected, axis=0)
         self._xmean += self._sigma * y_w
+        self._mean_history.append(self.objective(self._xmean))
 
         if self._visuals == True:
             title = "gen " + str(self._generation)
@@ -160,13 +163,13 @@ class CMAES:
             title += ", lambda: " + str(self._lambda)
             title += ", dim: " + str(self._dimension)
             plt.title(title)
-            plt.axis('equal')
-            plt.axvline(0, linewidth=6, c='red')
-            plt.axhline(0, linewidth=6, c='red')
-            plt.axvline(0.1, linewidth=2, c='orange')
-            plt.axhline(0.1, linewidth=2, c='orange')
-            plt.axvline(-0.1, linewidth=2, c='orange')
-            plt.axhline(-0.1, linewidth=2, c='orange')
+            # plt.axis('equal')
+            plt.axvline(0, linewidth=6, c='black')
+            plt.axhline(0, linewidth=6, c='black')
+            plt.axvline(self._bounds[0][0], linewidth=2, c='orange')
+            plt.axvline(self._bounds[0][1], linewidth=2, c='orange')
+            plt.axhline(self._bounds[1][0], linewidth=2, c='orange')
+            plt.axhline(self._bounds[1][1], linewidth=2, c='orange')
             x1 = [point[0] for point in population]
             x2 = [point[1] for point in population]
             plt.scatter(x1, x2, s=50)
@@ -175,6 +178,10 @@ class CMAES:
             plt.scatter(x1, x2, s=15)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
+            max1 = 2*max([abs(point[0]) for point in population])
+            max2 = 2*max([abs(point[1]) for point in population])
+            plt.xlim(-max1, max1)
+            plt.ylim(-max2, max2)
             plt.pause(_DELAY)
             plt.clf()
             plt.cla()
@@ -231,7 +238,7 @@ class CMAES:
             diffs.append(self._sigma_history[i+1] / self._sigma_history[i])
         return diffs
 
-    def cond_history(self):
+    def cond_history(self) -> List[float]:
         assert self._eigen_history != [], "Can't compute condition number, must run the algorithm first"
         greatest = self._eigen_history[:,-1]
         smallest = self._eigen_history[:,0]
@@ -242,8 +249,11 @@ class CMAES:
         assert self._eigen_history != [], "Can't get eigenvalue history, must run the algorithm first"
         return self._eigen_history
 
-    def ecdf(self, targets: np.array) -> List[float]:
-        #based on algorithm results, return ecdf curves and evals_per_iter
+    def mean_history(self) -> List[float]:
+        assert self._mean_history != [], "Can't get f(mean) history, must run the algorithm first"
+        return self._mean_history
+
+    def ecdf_history(self, targets: np.array) -> List[float]:
         assert self._results != [], "Can't get ecdf values, must run the algorithm first"
         ecdf = []
         for result in self._results:
@@ -295,8 +305,9 @@ class CMAES:
 def felli(x: np.ndarray) -> float:
     dim = x.shape[0]
     if dim == 1:
-        return quadratic(x)
+        return float(np.dot(x, x))
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
+    print(x,float(np.matmul(arr, x ** 2)) )
     return float(np.matmul(arr, x ** 2))
 
 def quadratic(x: np.ndarray) -> float:
