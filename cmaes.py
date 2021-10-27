@@ -307,7 +307,6 @@ def felli(x: np.ndarray) -> float:
     if dim == 1:
         return float(np.dot(x, x))
     arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
-    print(x,float(np.matmul(arr, x ** 2)) )
     return float(np.matmul(arr, x ** 2))
 
 def quadratic(x: np.ndarray) -> float:
