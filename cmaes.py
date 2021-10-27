@@ -164,12 +164,12 @@ class CMAES:
             title += ", dim: " + str(self._dimension)
             plt.title(title)
             # plt.axis('equal')
-            plt.axvline(0, linewidth=6, c='black')
-            plt.axhline(0, linewidth=6, c='black')
-            plt.axvline(self._bounds[0][0], linewidth=2, c='orange')
-            plt.axvline(self._bounds[0][1], linewidth=2, c='orange')
-            plt.axhline(self._bounds[1][0], linewidth=2, c='orange')
-            plt.axhline(self._bounds[1][1], linewidth=2, c='orange')
+            plt.axvline(0, linewidth=4, c='black')
+            plt.axhline(0, linewidth=4, c='black')
+            plt.axvline(self._bounds[0][0], linewidth=2, c='red')
+            plt.axvline(self._bounds[0][1], linewidth=2, c='red')
+            plt.axhline(self._bounds[1][0], linewidth=2, c='red')
+            plt.axhline(self._bounds[1][1], linewidth=2, c='red')
             x1 = [point[0] for point in population]
             x2 = [point[1] for point in population]
             plt.scatter(x1, x2, s=50)
@@ -178,8 +178,8 @@ class CMAES:
             plt.scatter(x1, x2, s=15)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
-            max1 = 2*max([abs(point[0]) for point in population])
-            max2 = 2*max([abs(point[1]) for point in population])
+            max1 = 1.3*max([abs(point[0]) for point in population])
+            max2 = 1.3*max([abs(point[1]) for point in population])
             plt.xlim(-max1, max1)
             plt.ylim(-max2, max2)
             plt.pause(_DELAY)
@@ -242,7 +242,7 @@ class CMAES:
         assert self._eigen_history != [], "Can't compute condition number, must run the algorithm first"
         greatest = self._eigen_history[:,-1]
         smallest = self._eigen_history[:,0]
-        result = greatest/smallest
+        result = greatest/(smallest+_EPS)
         return result
         
     def eigen_history(self) -> np.ndarray:
@@ -322,6 +322,6 @@ def rosenbrock(x: np.ndarray) -> float:
     return sum([100 * ((x[i]+1) ** 2 - (x[i + 1]+1)) ** 2 + x[i] ** 2 for i in range(x.shape[0] - 1)])
 
 def ackley(x: np.ndarray) -> float:
-    exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x)))
-    exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x)))
-    return exp1 + exp2 + 20 + np.e
+    exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x))) + 20
+    exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x))) + np.e
+    return exp1 + exp2
