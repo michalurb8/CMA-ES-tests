@@ -111,11 +111,15 @@ def _format_eigenvalues(eigens_list: List, evals_per_gen: int) -> Tuple:
     return x_axis, other_axes
 
 def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool = False):
+    """
+    run_test()) is the main function. It runs the evaluate function for all the algorithm varianst.
+    All of them are plotted separately to be compared.
+    """
     runsc = [
-        (None,         False),
-        ('reflection', False),
+        (None,         True),
+        ('reflection', True),
         ('projection', True),
-        ('resampling', False)
+        ('resampling', True)
     ]
     ecdf_plots = []
     sigma_plots = []
@@ -134,7 +138,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         mean_plots.append((mean[0], mean[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
-    title_str = f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; generations: {stop_after}"
+    title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
@@ -168,6 +172,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     for mean in mean_plots:
         plt.plot(mean[0], mean[1], label=mean[2])
     plt.ylabel("f(mean)")
+    plt.yscale("log")
     plt.xlabel("# of function evaluations", fontsize=12)
 
     fig, axs = plt.subplots(2,2, sharex = True, sharey=True)
