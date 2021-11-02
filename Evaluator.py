@@ -7,7 +7,6 @@ from sys import stdout
 _TARGETS = np.array([10 ** i for i in range(-10, 10)])
 
 def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: List, lambda_arg: int, stop_after: int, visual: bool, correction: bool):
-    # reapetedly run the algorithm, return results: ECDF values, sigma values, sigma difference values
     """
     evaluate() runs the algorithm multiple times (exactly 'iteration' times).
     Data about ecdf, sigma, condition number etc. is collected.
@@ -31,6 +30,8 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
         How many iterations are to be run
     visual: bool
         If True, every algorithm generation will be visualised (only 2 first dimensions)
+    ----------
+    # run the algorithm multiple times, return averaged results: ECDF values, sigma values, sigma difference values
     """
     if objectives is None:
             objectives = ['felli']
@@ -110,17 +111,11 @@ def _format_eigenvalues(eigens_list: List, evals_per_gen: int) -> Tuple:
         other_axes.append(sum[:,i])
     return x_axis, other_axes
 
-def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, correction: bool):
+def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, rmode: str):
     """
     run_test()) is the main function. It runs the evaluate function for all the algorithm varianst.
     All of them are plotted separately to be compared.
     """
-    runsc = [
-        (None,         False),
-        ('reflection', False),
-        ('projection', True),
-        ('resampling', True)
-    ]
     ecdf_plots = []
     sigma_plots = []
     diff_plots = []
@@ -128,18 +123,18 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     cond_plots = []
     mean_plots = []
 
-    for rmode, v in runsc:
-        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, visual and v, correction)
+    for corr in [False, True]:
+        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, visual, corr)
 
-        ecdf_plots.append((ecdf[0], ecdf[1], str(rmode)))
-        sigma_plots.append((sigma[0], sigma[1], str(rmode)))
-        diff_plots.append((diff[0], diff[1], str(rmode)))
-        eigen_plots.append((eigen[0], eigen[1], str(rmode)))
-        cond_plots.append((cond[0], cond[1], str(rmode)))
-        mean_plots.append((mean[0], mean[1], str(rmode)))
+        ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
+        sigma_plots.append((sigma[0], sigma[1], str(corr)))
+        diff_plots.append((diff[0], diff[1], str(corr)))
+        eigen_plots.append((eigen[0], eigen[1], str(corr)))
+        cond_plots.append((cond[0], cond[1], str(corr)))
+        mean_plots.append((mean[0], mean[1], str(corr)))
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
-    title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}; correction: {correction}"; 
+    title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}; method: {rmode}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
@@ -176,15 +171,15 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     plt.yscale("log")
     plt.xlabel("# of function evaluations", fontsize=12)
 
-    fig, axs = plt.subplots(2,2, sharex = True, sharey=True)
+    fig, axs = plt.subplots(2,1, sharex = True, sharey=True)
     plt.yscale("log")
     fig.suptitle(title_str, fontsize=14)
     fig.subplots_adjust(hspace=0, wspace=0)
 
     for index, eigen_plot in enumerate(eigen_plots):
         for eigenvalue in eigen_plot[1]:
-            axs[index//2][index%2].plot(eigen_plot[0], eigenvalue)
-        axs[index//2][index%2].title.set_text(eigen_plot[2])
+            axs[index%2].plot(eigen_plot[0], eigenvalue)
+        axs[index%2].title.set_text(eigen_plot[2])
         # index//2 and index%2 are subplot coordinates: 00 01 10 11
         # eigen_plot[0] is the horizontal axis, eigen_plot[1] contains all vertical axes, eigen_plot[2] is the title string.
 

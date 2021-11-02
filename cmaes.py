@@ -150,21 +150,24 @@ class CMAES:
 
         repair_diffs = np.array([s[2] for s in solutions])
         selected_diffs = repair_diffs[: self._mu]
-        sum_diffs = np.sum(repair_diffs, axis = 0)
+        sum_diffs = np.mean(selected_diffs, axis = 0)
 
         # ~ N(m, sigma^2 C)
         population = np.array([s[0] for s in solutions])
         # ~ N(0, C)
         y_k = (population - self._xmean) / self._sigma
 
-        # Move
-        if self._move_delta:
-            y_k -= sum_diffs
 
-        # Selection and recombination
+        # Selection
         selected = y_k[: self._mu]
         y_w = np.mean(selected, axis=0) # cumulated delta vector
+
+        # Delta correction step
+        if self._move_delta:
+            y_w -= 0.1 * sum_diffs
+
         self._xmean += self._sigma * y_w
+
         self._mean_history.append(self.objective(self._xmean))
 
         if self._visuals == True:
@@ -294,8 +297,10 @@ class CMAES:
         Repair vector is returned, equal to x - original_x.
         """
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
-        original = x
+        original = np.copy(x)
         if repair_mode == None:
+            pass
+        elif self._check_point(x):
             pass
         elif repair_mode == 'reflection':
             for i in range(len(x)):
