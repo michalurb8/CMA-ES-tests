@@ -28,14 +28,17 @@ class CMAES:
         How many iterations are to be run
     visuals: bool
         If True, every algorithm generation will be visualised (only 2 first dimensions)
+    move_delta: bool
+        If True, delta (y_w) will be change by the sum of repair vectors
     """
-    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False):
+    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False, move_delta: bool = False):
         assert dimensions > 0, "Number of dimensions must be greater than 0"
         self._dimension = dimensions
         self._fitness = objective_function
         self._repair_mode = repair_mode
         self._stop_after = stop_after
         self._visuals = visuals
+        self._move_delta = move_delta
 
         # Set bounds:
         self._bounds = [(-0.1,100) for _ in range(self._dimension)]
@@ -108,8 +111,7 @@ class CMAES:
             value_break_condition = False
             for _ in range(self._lambda):
                 x = self._sample_solution()
-                if not self._check_point(x):
-                    self._repair(x, self._bounds, self._repair_mode)
+                repair_diff = self._repair(x, self._bounds, self._repair_mode)
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
@@ -117,7 +119,7 @@ class CMAES:
                     value_break_condition = True
                     self._results.append((gen_count, value))
                     break
-                solutions.append((x, value))
+                solutions.append((x, value, repair_diff))
 
             if value_break_condition:
                 break
@@ -146,14 +148,22 @@ class CMAES:
         self._generation += 1
         solutions.sort(key=lambda solution: solution[1])
 
+        repair_diffs = np.array([s[2] for s in solutions])
+        selected_diffs = repair_diffs[: self._mu]
+        sum_diffs = np.sum(repair_diffs, axis = 0)
+
         # ~ N(m, sigma^2 C)
         population = np.array([s[0] for s in solutions])
         # ~ N(0, C)
         y_k = (population - self._xmean) / self._sigma
 
+        # Move
+        if self._move_delta:
+            y_k -= sum_diffs
+
         # Selection and recombination
         selected = y_k[: self._mu]
-        y_w = np.mean(selected, axis=0)
+        y_w = np.mean(selected, axis=0) # cumulated delta vector
         self._xmean += self._sigma * y_w
         self._mean_history.append(self.objective(self._xmean))
 
@@ -162,6 +172,7 @@ class CMAES:
             title += ", repair_mode: " + str(self._repair_mode)
             title += ", lambda: " + str(self._lambda)
             title += ", dim: " + str(self._dimension)
+            title += ", corr: " + str(self._move_delta)
             plt.title(title)
             # plt.axis('equal')
             plt.axvline(0, linewidth=4, c='black')
@@ -268,9 +279,24 @@ class CMAES:
         return self._lambda
 
     def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str):
+        """
+        Parameters
+        ----------
+        x: numpy array
+            Represents a single point in search space
+        bounds: List of dim Tuples of two floats
+            Describe lower and upper bound in each dimension
+        repair_mode: str
+            Bound constraint repair method. Chosen from: None, projection, reflection, resampling.
+        ----------
+        This method repairs x according to repair_mode and bounds.
+        x is replaced with the repaired value.
+        Repair vector is returned, equal to x - original_x.
+        """
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
+        original = x
         if repair_mode == None:
-            return
+            pass
         elif repair_mode == 'reflection':
             for i in range(len(x)):
                 while x[i] < bounds[i][0] or x[i] > bounds[i][1]:
@@ -290,11 +316,11 @@ class CMAES:
                 for i in range(len(x)):
                     x[i] = new[i]
                 if self._check_point(x):
-                    return
+                    break
             self._repair(x, bounds, 'projection')
-
         else:
             raise Exception("Incorrect repair mode")
+        return x - original
     
     def _check_point(self, x: np.array):
         for i in range(len(x)):
