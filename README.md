@@ -2,11 +2,8 @@
 An implementation of CMA-ES algorithm for testing bound constraint repair methods.
 
 ## Required Python3 libraries:
-
-numpy 1.20.2
-
-matplotlib 3.4.0
-
+* numpy 1.20.2
+* matplotlib 3.4.0
 ## Run with:
 
 `python3 main.py`
