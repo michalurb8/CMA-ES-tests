@@ -123,8 +123,9 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     cond_plots = []
     mean_plots = []
 
-    for corr in [False, True]:
-        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, visual, corr)
+    run_params = [(False, False), (True, True)]
+    for corr, v in run_params:
+        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, v and visual, corr)
 
         ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
         sigma_plots.append((sigma[0], sigma[1], str(corr)))
@@ -180,8 +181,6 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         for eigenvalue in eigen_plot[1]:
             axs[index%2].plot(eigen_plot[0], eigenvalue)
         axs[index%2].title.set_text(eigen_plot[2])
-        # index//2 and index%2 are subplot coordinates: 00 01 10 11
-        # eigen_plot[0] is the horizontal axis, eigen_plot[1] contains all vertical axes, eigen_plot[2] is the title string.
 
     plt.show()
 

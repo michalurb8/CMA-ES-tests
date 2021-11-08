@@ -40,6 +40,8 @@ class CMAES:
         self._visuals = visuals
         self._move_delta = move_delta
 
+        assert self._repair_mode in [None, 'projection', 'reflection', 'resampling'], 'Incorrect repair mode'
+
         # Set bounds:
         self._bounds = [(-0.1,100) for _ in range(self._dimension)]
 
@@ -111,7 +113,7 @@ class CMAES:
             value_break_condition = False
             for _ in range(self._lambda):
                 x = self._sample_solution()
-                repair_diff = self._repair(x, self._bounds, self._repair_mode)
+                self._repair(x, self._bounds, self._repair_mode)
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
@@ -119,7 +121,7 @@ class CMAES:
                     value_break_condition = True
                     self._results.append((gen_count, value))
                     break
-                solutions.append((x, value, repair_diff))
+                solutions.append((x, value))
 
             if value_break_condition:
                 break
@@ -148,15 +150,10 @@ class CMAES:
         self._generation += 1
         solutions.sort(key=lambda solution: solution[1])
 
-        repair_diffs = np.array([s[2] for s in solutions])
-        selected_diffs = repair_diffs[: self._mu]
-        sum_diffs = np.mean(selected_diffs, axis = 0)
-
         # ~ N(m, sigma^2 C)
         population = np.array([s[0] for s in solutions])
         # ~ N(0, C)
         y_k = (population - self._xmean) / self._sigma
-
 
         # Selection
         selected = y_k[: self._mu]
@@ -164,7 +161,9 @@ class CMAES:
 
         # Delta correction step
         if self._move_delta:
-            y_w -= 0.1 * sum_diffs
+            difference_of_means = np.mean(population, axis=0) - self._xmean
+            correction = 0.01 * difference_of_means
+            y_w -= correction
 
         self._xmean += self._sigma * y_w
 
@@ -297,7 +296,6 @@ class CMAES:
         Repair vector is returned, equal to x - original_x.
         """
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
-        original = np.copy(x)
         if repair_mode == None:
             pass
         elif self._check_point(x):
@@ -325,7 +323,6 @@ class CMAES:
             self._repair(x, bounds, 'projection')
         else:
             raise Exception("Incorrect repair mode")
-        return x - original
     
     def _check_point(self, x: np.array):
         for i in range(len(x)):
