@@ -19,7 +19,6 @@ All possible arguments:
 -l An integer, number of points in the population. Default is 4*number of dimensions.
 -s An integer, number of generations of a single CMA-ES run. Default is 50.
 -v Include to turn on visual mode, plotting all points of each CMA-ES generation.
--c Inlucde to turn on delta correction.
 
 Example uses:
 

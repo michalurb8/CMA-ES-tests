@@ -19,9 +19,6 @@ parser.add_argument('-s', '--stop', type=int, default=100,
 parser.add_argument('-v', '--vis', default=False,
                     help='Turn on visualisation.', action='store_true')
 
-parser.add_argument('-c', '--corr', default=False,
-                    help='Turn on delta correction.', action='store_true')
-
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.corr)
+    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis)

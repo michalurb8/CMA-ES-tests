@@ -6,7 +6,7 @@ from sys import stdout
 
 _TARGETS = np.array([10 ** i for i in range(-10, 10)])
 
-def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: List, lambda_arg: int, stop_after: int, visual: bool, correction: bool):
+def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: List, lambda_arg: int, stop_after: int, visual: bool):
     # reapetedly run the algorithm, return results: ECDF values, sigma values, sigma difference values
     """
     evaluate() runs the algorithm multiple times (exactly 'iteration' times).
@@ -43,13 +43,13 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
-    print(f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}; correction: {correction}")
+    print(f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}")
     for objective in objectives:
         print("    Currently running:", objective)
         for iteration in range(iterations):
             stdout.write(f"\rIteration: {1+iteration} / {iterations}")
             stdout.flush()
-            algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual, correction) # algorithm runs here
+            algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual) # algorithm runs here
             algo.generation_loop()
             if evals_per_gen == None:
                 evals_per_gen = algo.evals_per_iteration()
@@ -110,14 +110,14 @@ def _format_eigenvalues(eigens_list: List, evals_per_gen: int) -> Tuple:
         other_axes.append(sum[:,i])
     return x_axis, other_axes
 
-def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, correction: bool):
+def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool = False):
     """
     run_test()) is the main function. It runs the evaluate function for all the algorithm varianst.
     All of them are plotted separately to be compared.
     """
     runsc = [
-        (None,         False),
-        ('reflection', False),
+        (None,         True),
+        ('reflection', True),
         ('projection', True),
         ('resampling', True)
     ]
@@ -129,8 +129,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     mean_plots = []
 
     for rmode, v in runsc:
-        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, visual and v, correction)
-
+        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, visual and v)
         ecdf_plots.append((ecdf[0], ecdf[1], str(rmode)))
         sigma_plots.append((sigma[0], sigma[1], str(rmode)))
         diff_plots.append((diff[0], diff[1], str(rmode)))
@@ -139,7 +138,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         mean_plots.append((mean[0], mean[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
-    title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}; correction: {correction}"; 
+    title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
