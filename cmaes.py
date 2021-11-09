@@ -162,7 +162,7 @@ class CMAES:
         # Delta correction step
         if self._move_delta:
             difference_of_means = np.mean(population, axis=0) - self._xmean
-            correction = 0.01 * difference_of_means
+            correction = 2 * difference_of_means / self._sigma
             y_w -= correction
 
         self._xmean += self._sigma * y_w
