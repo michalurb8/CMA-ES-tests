@@ -109,11 +109,11 @@ class CMAES:
             self._sigma_history.append(self._sigma)
             self._eigen_history[self._generation, :] = np.multiply(self._D, np.ones(self._dimension))
 
-            solutions = []
+            solutions = [] # this is a list of tuples (x, y , value)
             value_break_condition = False
             for _ in range(self._lambda):
-                x = self._sample_solution()
-                self._repair(x, self._bounds, self._repair_mode)
+                x = self._sample_solution() # x is the original point
+                y = self._repair(x, self._bounds, self._repair_mode) # y is the repaired point
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
@@ -121,7 +121,7 @@ class CMAES:
                     value_break_condition = True
                     self._results.append((gen_count, value))
                     break
-                solutions.append((x, value))
+                solutions.append((x, y, value))
 
             if value_break_condition:
                 break
@@ -140,18 +140,23 @@ class CMAES:
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
         return B, D
 
-    def update(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
+    def update(self, solutions: List[Tuple[np.ndarray, np.ndarray, float]]) -> None:
         assert len(solutions) == self._lambda, "Must evaluate solutions with length equal to population size."
         for s in solutions:
             assert np.all(
                 np.abs(s[0]) < _POINT_MAX
-            ), f"Absolute value of all solutions must be less than {_POINT_MAX} to avoid overflow errors."
+            ), f"Absolute value of all generated points must be less than {_POINT_MAX} to avoid overflow errors."
+            assert np.all(
+                np.abs(s[1]) < _POINT_MAX
+            ), f"Absolute value of all repaired points must be less than {_POINT_MAX} to avoid overflow errors."
 
         self._generation += 1
-        solutions.sort(key=lambda solution: solution[1])
+        solutions.sort(key=lambda solution: solution[-1]) #sort population by function value
 
+        # print(solutions[0][0].shape, solutions[0][1].shape, solutions[0][2])
         # ~ N(m, sigma^2 C)
-        population = np.array([s[0] for s in solutions])
+        originals = np.array([s[0] for s in solutions])
+        population = np.array([s[1] for s in solutions])
         # ~ N(0, C)
         y_k = (population - self._xmean) / self._sigma
 
@@ -296,33 +301,35 @@ class CMAES:
         Repair vector is returned, equal to x - original_x.
         """
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
+        repaired = np.copy(x)
         if repair_mode == None:
             pass
         elif self._check_point(x):
             pass
         elif repair_mode == 'reflection':
             for i in range(len(x)):
-                while x[i] < bounds[i][0] or x[i] > bounds[i][1]:
-                    if x[i] < bounds[i][0]:
-                        x[i] = 2 * bounds[i][0] - x[i]
-                    if x[i] > bounds[i][1]:
-                        x[i] = 2 * bounds[i][1] - x[i]
+                while repaired[i] < bounds[i][0] or repaired[i] > bounds[i][1]:
+                    if repaired[i] < bounds[i][0]:
+                        repaired[i] = 2 * bounds[i][0] - repaired[i]
+                    if repaired[i] > bounds[i][1]:
+                        repaired[i] = 2 * bounds[i][1] - repaired[i]
         elif repair_mode == 'projection':
-            for i in range(len(x)):
-                if x[i] < bounds[i][0]:
-                    x[i] = bounds[i][0]
-                elif x[i] > bounds[i][1]:
-                    x[i] = bounds[i][1]
+            for i in range(len(repaired)):
+                if repaired[i] < bounds[i][0]:
+                    repaired[i] = bounds[i][0]
+                elif repaired[i] > bounds[i][1]:
+                    repaired[i] = bounds[i][1]
         elif repair_mode == 'resampling':
             for _ in range(_RESAMPLING_LIMIT):
                 new = self._sample_solution()
-                for i in range(len(x)):
-                    x[i] = new[i]
-                if self._check_point(x):
+                for i in range(len(repaired)):
+                    repaired[i] = new[i]
+                if self._check_point(repaired):
                     break
-            self._repair(x, bounds, 'projection')
+            repaired = self._repair(repaired, bounds, 'projection')
         else:
             raise Exception("Incorrect repair mode")
+        return repaired
     
     def _check_point(self, x: np.array):
         for i in range(len(x)):
