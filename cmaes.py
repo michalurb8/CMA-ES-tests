@@ -143,12 +143,11 @@ class CMAES:
         self._generation += 1
         solutions.sort(key=lambda solution: solution[-1]) #sort population by function value
 
-        # print(solutions[0][0].shape, solutions[0][1].shape, solutions[0][2])
         # ~ N(m, sigma^2 C)
         originals = np.array([s[0] for s in solutions])
         population = np.array([s[1] for s in solutions])
         # ~ N(0, C)
-        y_k = (population - self._xmean) / self._sigma
+        y_k = (population - self._xmean) / (self._sigma + _EPS)
 
         # Selection
         selected = y_k[: self._mu]
@@ -156,9 +155,20 @@ class CMAES:
 
         # Delta correction step
         if self._move_delta:
-            difference_of_means = np.mean(population, axis=0) - self._xmean
-            correction = 2 * difference_of_means / self._sigma
-            y_w -= correction
+            # Delta 1: difference between generated points mean and repaired points mean:
+            delta1 = (np.mean(originals) - np.mean(population)) / (self._sigma + _EPS)
+            # Delta 2: difference between selected generated points mean and selected repaired points mean:
+            delta2 = (np.mean(originals[:self._mu]) - np.mean(population[:self._mu])) / (self._sigma + _EPS)
+
+            alfa = 0.1
+            correction = _resize(delta1, y_w, alfa) + _resize(delta2, y_w, alfa)
+            # print(np.linalg.norm(delta1))
+            # print(np.linalg.norm(delta2))
+            # print(np.linalg.norm(correction))
+            # print(np.linalg.norm(y_w))
+            # print(np.linalg.norm(y_w + correction))
+            # print()
+            y_w += correction
 
         self._xmean += self._sigma * y_w
 
@@ -186,8 +196,9 @@ class CMAES:
             plt.scatter(x1, x2, s=15)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
-            max1 = 1.3*max([abs(point[0]) for point in population])
-            max2 = 1.3*max([abs(point[1]) for point in population])
+            zoom_out = 1.3
+            max1 = zoom_out*max([abs(point[0]) for point in population])
+            max2 = zoom_out*max([abs(point[1]) for point in population])
             plt.xlim(-max1, max1)
             plt.ylim(-max2, max2)
             plt.pause(_DELAY)
@@ -218,7 +229,7 @@ class CMAES:
                 + self._lr_c1 * rank_one
                 + self._lr_c_mu * rank_mu
         )
-
+    
     def objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
         if self._fitness == 'felli':
@@ -275,7 +286,7 @@ class CMAES:
     def evals_per_iteration(self) -> int:
         return self._lambda
 
-    def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str):
+    def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str) -> np.array:
         """
         Parameters
         ----------
@@ -350,3 +361,10 @@ def ackley(x: np.ndarray) -> float:
     exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x))) + 20
     exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x))) + np.e
     return exp1 + exp2
+
+def _resize(vec1: np.array, vec2: np.array, alfa: float) -> None:
+    #returns vec1 resized to alfa*lenght of vec2
+    vec1 = vec1 / (np.linalg.norm(vec1) + _EPS)
+    scale = alfa * np.linalg.norm(vec2)
+    vec1 *= scale
+    return vec1

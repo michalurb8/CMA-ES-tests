@@ -82,7 +82,7 @@ def _format_list(input_list: List, evals_per_gen: int) -> Tuple:
     run_count = len(input_list)
     run_length = len(input_list[0])
     for i in input_list:
-        assert len(i) == run_length, "Runs are of different length, cannot take average of sigma"
+        assert len(i) == run_length, "Runs are of different length, cannot take average"
     y_axis = []
     for i in range(run_length):
         y_axis.append(sum([sigmas[i] for sigmas in input_list]) / run_count)
