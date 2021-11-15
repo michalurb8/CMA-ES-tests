@@ -49,8 +49,6 @@ class CMAES:
         self._xmean = 30 * np.ones(self._dimension)
         # Step size
         self._sigma = 1
-        # Stop condition
-        self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
 
         # Population size
         if lambda_arg == None:
@@ -117,15 +115,7 @@ class CMAES:
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
-                if value < self._stop_value:
-                    value_break_condition = True
-                    self._results.append((gen_count, value))
-                    break
                 solutions.append((x, y, value))
-
-            if value_break_condition:
-                break
-
             # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
             self.update(solutions)
