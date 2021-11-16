@@ -156,12 +156,15 @@ class CMAES:
         # Delta correction step
         if self._move_delta:
             # Delta 1: difference between generated points mean and repaired points mean:
-            delta1 = (np.mean(originals, axis=0) - np.mean(population, axis=0)) / (self._sigma + _EPS)
+            delta1 = 0 # (np.mean(originals, axis=0) - np.mean(population, axis=0)) / (self._sigma + _EPS)
             # Delta 2: difference between selected generated points mean and selected repaired points mean:
             delta2 = (np.mean(originals[:self._mu], axis=0) - np.mean(population[:self._mu], axis=0)) / (self._sigma + _EPS)
 
-            alfa = 0.4
-            correction = _resize(delta1, y_w, alfa) + _resize(delta2, y_w, alfa)
+            alfa = 0.1
+            delta1_scaled = _resize(delta1, y_w, alfa)
+            delta2_scaled = _resize(delta2, y_w, alfa)
+
+            correction = delta1_scaled # + delta2_scaled
             # print(np.dot(delta1, delta2))
             y_w += correction
 
