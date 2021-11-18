@@ -95,12 +95,13 @@ class CMAES:
         self._sigma_history = []
         self._eigen_history = np.zeros((self._stop_after, self._dimension))
         self._mean_history = []
+        self._repair_history = []
 
         # Store best found value so far for ECDF calculation
         self._best_value = infp
 
     def generation_loop(self):
-        assert self._results == [], "One instance can only run once."
+        assert self._results == [], "One algorithm instance can only run once."
         for gen_count in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
 
@@ -108,16 +109,19 @@ class CMAES:
             self._eigen_history[self._generation, :] = np.multiply(self._D, np.ones(self._dimension))
 
             solutions = [] # this is a list of tuples (x, y , value)
-            value_break_condition = False
+            repair_count = 0
             for _ in range(self._lambda):
                 x = self._sample_solution() # x is the original point
                 y = self._repair(x, self._bounds, self._repair_mode) # y is the repaired point
+                if not np.all(x == y):
+                    repair_count += 1
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
                 solutions.append((x, y, value))
             # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
+            self._repair_history.append(repair_count)
             self.update(solutions)
             self._results.append((gen_count, self._best_value))
 
@@ -281,6 +285,10 @@ class CMAES:
             ecdf.append(passed / len(targets))
         return ecdf
     
+    def repair_history(self) -> List[float]:
+        assert self._repair_history != [], "Can't get repair history, must run the algorithm first"
+        return self._repair_history
+
     def evals_per_iteration(self) -> int:
         return self._lambda
 

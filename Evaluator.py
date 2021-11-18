@@ -22,7 +22,6 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     objectives: List[str]
         List of objective functions. For each function, the algorithm will run 'iteration' times,
         then an average of all runs for all objective functions will be computed.
-        If none, oen default function is chosen.
         Chosen from: quadratic, felli, bent, rastrigin, rosenbrock, ackley
     lambda_arg : int
         Population count. Must be > 3, if set to None, default value will be computed.
@@ -34,13 +33,14 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     # run the algorithm multiple times, return averaged results: ECDF values, sigma values, sigma difference values
     """
     if objectives is None:
-            objectives = ['felli']
+            objectives = ['rastrigin']
     ecdfs_list = []
     sigmas_list = []
     diffs_list = []
     eigens_list = []
     cond_list = []
     mean_list = []
+    repair_list = []
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
@@ -62,6 +62,7 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
             eigens_list.append(algo.eigen_history())
             cond_list.append(algo.cond_history())
             mean_list.append(algo.mean_history())
+            repair_list.append(algo.repair_history())
         print()
 
     formatted_ecdfs = _format_list(ecdfs_list, evals_per_gen)
@@ -69,8 +70,9 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     formatted_diffs = _format_list(diffs_list, evals_per_gen)
     formatted_conds = _format_list(cond_list, evals_per_gen)
     formatted_means = _format_list(mean_list, evals_per_gen)
+    formatted_repairs = _format_list(repair_list, evals_per_gen)
     formatted_eigens = _format_eigenvalues(eigens_list, evals_per_gen)
-    return (formatted_ecdfs, formatted_sigmas, formatted_diffs, formatted_eigens, formatted_conds, formatted_means)
+    return (formatted_ecdfs, formatted_sigmas, formatted_diffs, formatted_eigens, formatted_conds, formatted_means, formatted_repairs)
 
 
 def _format_list(input_list: List, evals_per_gen: int) -> Tuple:
@@ -122,10 +124,11 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     eigen_plots = []
     cond_plots = []
     mean_plots = []
+    repair_plots = []
 
     run_params = [(False, False), (True, True)]
     for corr, v in run_params:
-        ecdf, sigma, diff, eigen, cond, mean = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, v and visual, corr)
+        ecdf, sigma, diff, eigen, cond, mean, rep = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, v and visual, corr)
 
         ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
         sigma_plots.append((sigma[0], sigma[1], str(corr)))
@@ -133,10 +136,11 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         eigen_plots.append((eigen[0], eigen[1], str(corr)))
         cond_plots.append((cond[0], cond[1], str(corr)))
         mean_plots.append((mean[0], mean[1], str(corr)))
+        repair_plots.append((rep[0], rep[1], str(corr)))
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
     title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}; method: {rmode}"; 
-    ecdf_ax = plt.subplot(511)
+    ecdf_ax = plt.subplot(611)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf_plot in ecdf_plots:
@@ -145,31 +149,37 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     plt.ylabel("ECDF")
     plt.ylim(0,1)
     
-    sigma_ax = plt.subplot(512, sharex=ecdf_ax)
+    sigma_ax = plt.subplot(612, sharex=ecdf_ax)
     plt.setp(sigma_ax.get_xticklabels(), visible = False)
     for sigma in sigma_plots:
         plt.plot(sigma[0], sigma[1], label=sigma[2])
     plt.yscale("log")
     plt.ylabel("sigma")
 
-    diff_ax = plt.subplot(513, sharex=ecdf_ax)
+    diff_ax = plt.subplot(613, sharex=ecdf_ax)
     plt.setp(diff_ax.get_xticklabels(), visible = False)
     for diff in diff_plots:
         plt.plot(diff[0], diff[1], label=diff[2])
     plt.ylabel("sigma difference")
 
-    cond_ax = plt.subplot(514, sharex=ecdf_ax)
+    cond_ax = plt.subplot(614, sharex=ecdf_ax)
     plt.setp(cond_ax.get_xticklabels(), visible = False)
     for cond in cond_plots:
         plt.plot(cond[0], cond[1], label=cond[2])
     plt.ylabel("condition number")
 
-    mean_ax = plt.subplot(515, sharex=ecdf_ax)
-    plt.setp(mean_ax.get_xticklabels(), fontsize = 12)
+    mean_ax = plt.subplot(615, sharex=ecdf_ax)
+    plt.setp(mean_ax.get_xticklabels(), visible = False)
     for mean in mean_plots:
         plt.plot(mean[0], mean[1], label=mean[2])
     plt.ylabel("f(mean)")
     plt.yscale("log")
+
+    rep_ax = plt.subplot(616, sharex=ecdf_ax)
+    plt.setp(mean_ax.get_xticklabels(), fontsize = 12)
+    for repair in repair_plots:
+        plt.plot(repair[0], repair[1], label=repair[2])
+    plt.ylabel("# of points repaired")
     plt.xlabel("# of function evaluations", fontsize=12)
 
     fig, axs = plt.subplots(2,1, sharex = True, sharey=True)
