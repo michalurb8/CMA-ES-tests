@@ -37,6 +37,8 @@ class CMAES:
         self._stop_after = stop_after
         self._visuals = visuals
 
+        assert self._repair_mode in [None, 'projection', 'reflection', 'resampling'], 'Incorrect repair mode'
+
         # Set bounds:
         self._bounds = [(-0.1,100) for _ in range(self._dimension)]
 
@@ -44,8 +46,6 @@ class CMAES:
         self._xmean = 30 * np.ones(self._dimension)
         # Step size
         self._sigma = 1
-        # Stop condition
-        self._stop_value = -1 # Set to -1 to disable. If enabled, runs are of different lengths and cannot be averaged.
 
         # Population size
         if lambda_arg == None:
@@ -92,38 +92,33 @@ class CMAES:
         self._sigma_history = []
         self._eigen_history = np.zeros((self._stop_after, self._dimension))
         self._mean_history = []
+        self._repair_history = []
 
         # Store best found value so far for ECDF calculation
         self._best_value = infp
 
     def generation_loop(self):
-        assert self._results == [], "One instance can only run once."
+        assert self._results == [], "One algorithm instance can only run once."
         for gen_count in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
 
             self._sigma_history.append(self._sigma)
             self._eigen_history[self._generation, :] = np.multiply(self._D, np.ones(self._dimension))
 
-            solutions = []
-            value_break_condition = False
+            solutions = [] # this is a list of tuples (x, y , value)
+            repair_count = 0
             for _ in range(self._lambda):
-                x = self._sample_solution()
-                if not self._check_point(x):
-                    self._repair(x, self._bounds, self._repair_mode)
+                x = self._sample_solution() # x is the original point
+                y = self._repair(x, self._bounds, self._repair_mode) # y is the repaired point
+                if not np.all(x == y):
+                    repair_count += 1
 
                 value = self.objective(x)
                 self._best_value = min(value, self._best_value)
-                if value < self._stop_value:
-                    value_break_condition = True
-                    self._results.append((gen_count, value))
-                    break
-                solutions.append((x, value))
-
-            if value_break_condition:
-                break
-
+                solutions.append((x, y, value))
             # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
+            self._repair_history.append(repair_count)
             self.update(solutions)
             self._results.append((gen_count, self._best_value))
 
@@ -136,25 +131,46 @@ class CMAES:
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
         return B, D
 
-    def update(self, solutions: List[Tuple[np.ndarray, float]]) -> None:
+    def update(self, solutions: List[Tuple[np.ndarray, np.ndarray, float]]) -> None:
         assert len(solutions) == self._lambda, "Must evaluate solutions with length equal to population size."
         for s in solutions:
             assert np.all(
                 np.abs(s[0]) < _POINT_MAX
-            ), f"Absolute value of all solutions must be less than {_POINT_MAX} to avoid overflow errors."
+            ), f"Absolute value of all generated points must be less than {_POINT_MAX} to avoid overflow errors."
+            assert np.all(
+                np.abs(s[1]) < _POINT_MAX
+            ), f"Absolute value of all repaired points must be less than {_POINT_MAX} to avoid overflow errors."
 
         self._generation += 1
-        solutions.sort(key=lambda solution: solution[1])
+        solutions.sort(key=lambda solution: solution[-1]) #sort population by function value
 
         # ~ N(m, sigma^2 C)
-        population = np.array([s[0] for s in solutions])
+        originals = np.array([s[0] for s in solutions])
+        population = np.array([s[1] for s in solutions])
         # ~ N(0, C)
-        y_k = (population - self._xmean) / self._sigma
+        y_k = (population - self._xmean) / (self._sigma + _EPS)
 
-        # Selection and recombination
+        # Selection
         selected = y_k[: self._mu]
-        y_w = np.mean(selected, axis=0)
+        y_w = np.mean(selected, axis=0) # cumulated delta vector
+
+        # Delta correction step
+        if self._move_delta:
+            # Delta 1: difference between generated points mean and repaired points mean:
+            delta1 = 0 # (np.mean(originals, axis=0) - np.mean(population, axis=0)) / (self._sigma + _EPS)
+            # Delta 2: difference between selected generated points mean and selected repaired points mean:
+            delta2 = (np.mean(originals[:self._mu], axis=0) - np.mean(population[:self._mu], axis=0)) / (self._sigma + _EPS)
+
+            alfa = 0.1
+            delta1_scaled = _resize(delta1, y_w, alfa)
+            delta2_scaled = _resize(delta2, y_w, alfa)
+
+            correction = delta1_scaled # + delta2_scaled
+            # print(np.dot(delta1, delta2))
+            y_w += correction
+
         self._xmean += self._sigma * y_w
+
         self._mean_history.append(self.objective(self._xmean))
 
         if self._visuals == True:
@@ -178,8 +194,9 @@ class CMAES:
             plt.scatter(x1, x2, s=15)
             plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
             plt.grid()
-            max1 = 1.3*max([abs(point[0]) for point in population])
-            max2 = 1.3*max([abs(point[1]) for point in population])
+            zoom_out = 1.3
+            max1 = zoom_out*max([abs(point[0]) for point in population])
+            max2 = zoom_out*max([abs(point[1]) for point in population])
             plt.xlim(-max1, max1)
             plt.ylim(-max2, max2)
             plt.pause(_DELAY)
@@ -210,7 +227,7 @@ class CMAES:
                 + self._lr_c1 * rank_one
                 + self._lr_c_mu * rank_mu
         )
-
+    
     def objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
         if self._fitness == 'felli':
@@ -264,37 +281,58 @@ class CMAES:
             ecdf.append(passed / len(targets))
         return ecdf
     
+    def repair_history(self) -> List[float]:
+        assert self._repair_history != [], "Can't get repair history, must run the algorithm first"
+        return self._repair_history
+
     def evals_per_iteration(self) -> int:
         return self._lambda
 
-    def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str):
+    def _repair(self, x: np.array, bounds: List[Tuple[float, float]], repair_mode: str) -> np.array:
+        """
+        Parameters
+        ----------
+        x: numpy array
+            Represents a single point in search space
+        bounds: List of dim Tuples of two floats
+            Describe lower and upper bound in each dimension
+        repair_mode: str
+            Bound constraint repair method. Chosen from: None, projection, reflection, resampling.
+        ----------
+        This method repairs x according to repair_mode and bounds.
+        x is replaced with the repaired value.
+        Repair vector is returned, equal to x - original_x.
+        """
         assert self._dimension == len(bounds), "Constraint number and dimensionality do not match"
+        repaired = np.copy(x)
         if repair_mode == None:
-            return
+            pass
+        elif self._check_point(x):
+            pass
         elif repair_mode == 'reflection':
             for i in range(len(x)):
-                while x[i] < bounds[i][0] or x[i] > bounds[i][1]:
-                    if x[i] < bounds[i][0]:
-                        x[i] = 2 * bounds[i][0] - x[i]
-                    if x[i] > bounds[i][1]:
-                        x[i] = 2 * bounds[i][1] - x[i]
+                while repaired[i] < bounds[i][0] or repaired[i] > bounds[i][1]:
+                    if repaired[i] < bounds[i][0]:
+                        repaired[i] = 2 * bounds[i][0] - repaired[i]
+                    if repaired[i] > bounds[i][1]:
+                        repaired[i] = 2 * bounds[i][1] - repaired[i]
         elif repair_mode == 'projection':
-            for i in range(len(x)):
-                if x[i] < bounds[i][0]:
-                    x[i] = bounds[i][0]
-                elif x[i] > bounds[i][1]:
-                    x[i] = bounds[i][1]
+            for i in range(len(repaired)):
+                if repaired[i] < bounds[i][0]:
+                    repaired[i] = bounds[i][0]
+                elif repaired[i] > bounds[i][1]:
+                    repaired[i] = bounds[i][1]
         elif repair_mode == 'resampling':
             for _ in range(_RESAMPLING_LIMIT):
                 new = self._sample_solution()
-                for i in range(len(x)):
-                    x[i] = new[i]
-                if self._check_point(x):
-                    return
-            self._repair(x, bounds, 'projection')
-
+                for i in range(len(repaired)):
+                    repaired[i] = new[i]
+                if self._check_point(repaired):
+                    break
+            repaired = self._repair(repaired, bounds, 'projection')
         else:
             raise Exception("Incorrect repair mode")
+        return repaired
     
     def _check_point(self, x: np.array):
         for i in range(len(x)):
@@ -325,3 +363,10 @@ def ackley(x: np.ndarray) -> float:
     exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x))) + 20
     exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x))) + np.e
     return exp1 + exp2
+
+def _resize(vec1: np.array, vec2: np.array, alfa: float) -> None:
+    #returns vec1 resized to alfa*lenght of vec2
+    vec1 = vec1 / (np.linalg.norm(vec1) + _EPS)
+    scale = alfa * np.linalg.norm(vec2)
+    vec1 *= scale
+    return vec1
