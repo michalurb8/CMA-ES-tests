@@ -28,14 +28,17 @@ class CMAES:
         How many iterations are to be run
     visuals: bool
         If True, every algorithm generation will be visualised (only 2 first dimensions)
+    move_delta: bool
+        If True, delta (y_w) will be change by the sum of repair vectors
     """
-    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False):
+    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False, move_delta: bool = False):
         assert dimensions > 0, "Number of dimensions must be greater than 0"
         self._dimension = dimensions
         self._fitness = objective_function
         self._repair_mode = repair_mode
         self._stop_after = stop_after
         self._visuals = visuals
+        self._move_delta = move_delta
 
         assert self._repair_mode in [None, 'projection', 'reflection', 'resampling'], 'Incorrect repair mode'
 
