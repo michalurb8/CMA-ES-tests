@@ -32,8 +32,6 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     ----------
     # run the algorithm multiple times, return averaged results: ECDF values, sigma values, sigma difference values
     """
-    if objectives is None:
-            objectives = ['rastrigin']
     ecdfs_list = []
     sigmas_list = []
     diffs_list = []
@@ -44,13 +42,13 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     evals_per_gen = None
     print("Starting evaluation...")
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
-    print(f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}")
+    print(f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}; correction: {correction}")
     for objective in objectives:
         print("    Currently running:", objective)
         for iteration in range(iterations):
             stdout.write(f"\rIteration: {1+iteration} / {iterations}")
             stdout.flush()
-            algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual) # algorithm runs here
+            algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual, correction) # algorithm runs here
             algo.generation_loop()
             if evals_per_gen == None:
                 evals_per_gen = algo.evals_per_iteration()
@@ -113,7 +111,7 @@ def _format_eigenvalues(eigens_list: List, evals_per_gen: int) -> Tuple:
         other_axes.append(sum[:,i])
     return x_axis, other_axes
 
-def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, rmode: str):
+def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, rmode: str, objectives: List[str]):
     """
     run_test()) is the main function. It runs the evaluate function for all the algorithm varianst.
     All of them are plotted separately to be compared.
@@ -128,7 +126,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
 
     run_params = [(False, False), (True, True)]
     for corr, v in run_params:
-        ecdf, sigma, diff, eigen, cond, mean, rep = evaluate(rmode, dimensions, iterations, None, lbd, stop_after, v and visual, corr)
+        ecdf, sigma, diff, eigen, cond, mean, rep = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
 
         ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
         sigma_plots.append((sigma[0], sigma[1], str(corr)))

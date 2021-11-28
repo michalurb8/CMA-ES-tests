@@ -22,6 +22,9 @@ parser.add_argument('-v', '--vis', default=False,
 parser.add_argument('-r', '--repair', type=str, default=None,
                     help='Repair method')
 
+parser.add_argument('-o', '--objective', type=str, default="felli",
+                    help='Objective function')
+
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.repair)
+    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.repair, [args.objective])

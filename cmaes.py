@@ -122,7 +122,7 @@ class CMAES:
             # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exatcly lambda points generated"
             self._repair_history.append(repair_count)
-            self.update(solutions)
+            self.update(solutions, repair_count)
             self._results.append((gen_count, self._best_value))
 
     def _sample_solution(self) -> np.ndarray:
@@ -134,7 +134,7 @@ class CMAES:
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
         return B, D
 
-    def update(self, solutions: List[Tuple[np.ndarray, np.ndarray, float]]) -> None:
+    def update(self, solutions: List[Tuple[np.ndarray, np.ndarray, float]], repair_count: int) -> None:
         assert len(solutions) == self._lambda, "Must evaluate solutions with length equal to population size."
         for s in solutions:
             assert np.all(
@@ -160,16 +160,15 @@ class CMAES:
         # Delta correction step
         if self._move_delta:
             # Delta 1: difference between generated points mean and repaired points mean:
-            delta1 = 0 # (np.mean(originals, axis=0) - np.mean(population, axis=0)) / (self._sigma + _EPS)
+            delta1 = (np.mean(originals, axis=0) - np.mean(population, axis=0)) / (self._sigma + _EPS)
             # Delta 2: difference between selected generated points mean and selected repaired points mean:
             delta2 = (np.mean(originals[:self._mu], axis=0) - np.mean(population[:self._mu], axis=0)) / (self._sigma + _EPS)
 
-            alfa = 0.1
-            delta1_scaled = _resize(delta1, y_w, alfa)
-            delta2_scaled = _resize(delta2, y_w, alfa)
+            alpha = 0.5 * repair_count/self._lambda
+            delta1_scaled = _resize(delta1, y_w, alpha)
+            delta2_scaled = _resize(delta2, y_w, alpha)
 
-            correction = delta1_scaled # + delta2_scaled
-            # print(np.dot(delta1, delta2))
+            correction = delta2_scaled
             y_w += correction
 
         self._xmean += self._sigma * y_w
@@ -181,6 +180,7 @@ class CMAES:
             title += ", repair_mode: " + str(self._repair_mode)
             title += ", lambda: " + str(self._lambda)
             title += ", dim: " + str(self._dimension)
+            title += ", correction: " + str(self._move_delta)
             plt.title(title)
             # plt.axis('equal')
             plt.axvline(0, linewidth=4, c='black')
@@ -245,7 +245,7 @@ class CMAES:
             return rosenbrock(x)
         elif self._fitness == 'ackley':
             return ackley(x)
-        raise Exception('Invalid objective function chosen')
+        raise Exception('Invalid objective function chosen: ', str(self._fitness))
 
     def sigma_history(self) -> List[float]:
         assert self._sigma_history != [], "Can't get sigma history, must run the algorithm first"
@@ -367,9 +367,9 @@ def ackley(x: np.ndarray) -> float:
     exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x))) + np.e
     return exp1 + exp2
 
-def _resize(vec1: np.array, vec2: np.array, alfa: float) -> None:
-    #returns vec1 resized to alfa*lenght of vec2
+def _resize(vec1: np.array, vec2: np.array, const: float) -> None:
+    #returns vec1 resized to const*lenght of vec2
     vec1 = vec1 / (np.linalg.norm(vec1) + _EPS)
-    scale = alfa * np.linalg.norm(vec2)
+    scale = const * np.linalg.norm(vec2)
     vec1 *= scale
     return vec1
