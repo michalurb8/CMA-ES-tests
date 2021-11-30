@@ -13,13 +13,13 @@ parser.add_argument('-d', '--dimensions', type=int, default=10,
 parser.add_argument('-l', '--lbd', type=int, default=None,
                     help='Population size.')
 
-parser.add_argument('-s', '--stop', type=int, default=100,
+parser.add_argument('-s', '--stop', type=int, default=150,
                     help='How many iterations to take average of.')
 
 parser.add_argument('-v', '--vis', default=False,
                     help='Turn on visualisation.', action='store_true')
 
-parser.add_argument('-r', '--repair', type=str, default=None,
+parser.add_argument('-r', '--repair', type=str, default='projection',
                     help='Repair method')
 
 parser.add_argument('-o', '--objective', type=str, default="felli",
