@@ -46,7 +46,7 @@ class CMAES:
         self._bounds = [(-0.1,100) for _ in range(self._dimension)]
 
         # Initial point
-        self._xmean = 30 * np.ones(self._dimension)
+        self._xmean = 10 + 80 * np.random.uniform(size = self._dimension)
         # Step size
         self._sigma = 1
 
