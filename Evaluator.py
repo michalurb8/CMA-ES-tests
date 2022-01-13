@@ -49,7 +49,6 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
             stdout.write(f"\rIteration: {1+iteration} / {iterations}")
             stdout.flush()
             algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual, correction) # algorithm runs here
-            algo.generation_loop()
             if evals_per_gen == None:
                 evals_per_gen = algo.evals_per_iteration()
             else:
@@ -124,7 +123,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     mean_plots = []
     repair_plots = []
 
-    run_params = [(False, False), (True, True)]
+    run_params = [(False, True), (True, True)]
     for corr, v in run_params:
         ecdf, sigma, diff, eigen, cond, mean, rep = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
 
@@ -138,47 +137,49 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
 
     lambda_prompt = str(lbd) if lbd is not None else "default"
     title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}; method: {rmode}"; 
-    ecdf_ax = plt.subplot(611)
+    ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf_plot in ecdf_plots:
         plt.plot(ecdf_plot[0], ecdf_plot[1], label=ecdf_plot[2])
     plt.legend(fontsize=12)
-    plt.ylabel("ECDF")
+    plt.ylabel("ECDF", rotation=45, horizontalalignment="right", verticalalignment="center")
     plt.ylim(0,1)
     
-    sigma_ax = plt.subplot(612, sharex=ecdf_ax)
+    sigma_ax = plt.subplot(512, sharex=ecdf_ax)
     plt.setp(sigma_ax.get_xticklabels(), visible = False)
     for sigma in sigma_plots:
         plt.plot(sigma[0], sigma[1], label=sigma[2])
     plt.yscale("log")
-    plt.ylabel("sigma")
+    plt.ylabel("Wartości sigma", rotation=45, horizontalalignment="right")
 
-    diff_ax = plt.subplot(613, sharex=ecdf_ax)
+    diff_ax = plt.subplot(513, sharex=ecdf_ax)
     plt.setp(diff_ax.get_xticklabels(), visible = False)
     for diff in diff_plots:
         plt.plot(diff[0], diff[1], label=diff[2])
-    plt.ylabel("sigma difference")
+    plt.ylabel("Ilorazy kolejnych sigma", rotation=45, horizontalalignment="right")
 
-    cond_ax = plt.subplot(614, sharex=ecdf_ax)
+    cond_ax = plt.subplot(514, sharex=ecdf_ax)
     plt.setp(cond_ax.get_xticklabels(), visible = False)
     for cond in cond_plots:
         plt.plot(cond[0], cond[1], label=cond[2])
-    plt.ylabel("condition number")
+    plt.ylabel("Wskaźnik uwarunkowania C", rotation=45, horizontalalignment="right")
 
-    mean_ax = plt.subplot(615, sharex=ecdf_ax)
-    plt.setp(mean_ax.get_xticklabels(), visible = False)
-    for mean in mean_plots:
-        plt.plot(mean[0], mean[1], label=mean[2])
-    plt.ylabel("f(mean)")
-    plt.yscale("log")
+    # mean_ax = plt.subplot(xxx, sharex=ecdf_ax) # one more plot - function value of population middle point
+    # plt.setp(mean_ax.get_xticklabels(), visible = False)
+    # for mean in mean_plots:
+    #     plt.plot(mean[0], mean[1], label=mean[2])
+    # plt.ylabel("f(mean)", rotation=45, horizontalalignment="right")
+    # plt.yscale("log")
 
-    rep_ax = plt.subplot(616, sharex=ecdf_ax)
-    plt.setp(mean_ax.get_xticklabels(), fontsize = 12)
+    rep_ax = plt.subplot(515, sharex=ecdf_ax)
+    plt.setp(rep_ax.get_xticklabels(), fontsize = 12)
     for repair in repair_plots:
         plt.plot(repair[0], repair[1], label=repair[2])
-    plt.ylabel("# of points repaired")
-    plt.xlabel("# of function evaluations", fontsize=12)
+    plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
+    plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
+
+    plt.subplots_adjust(hspace=0.3)
 
     fig, axs = plt.subplots(2,1, sharex = True, sharey=True)
     plt.yscale("log")

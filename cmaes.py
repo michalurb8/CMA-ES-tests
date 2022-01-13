@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 
-_EPS = 1e-20
-_POINT_MAX = 1e30
-_SIGMA_MAX = 1e30
+_EPS = 1e-50
+_POINT_MAX = 1e50
+_SIGMA_MAX = 1e50
 
-_DELAY = 0.4
+_DELAY = 1
 
 infp = float('inf')
 infn = float('-inf')
@@ -100,7 +100,10 @@ class CMAES:
         # Store best found value so far for ECDF calculation
         self._best_value = infp
 
-    def generation_loop(self):
+        # Run the algorithm immediately
+        self._generation_loop()
+
+    def _generation_loop(self):
         assert self._results == [], "One algorithm instance can only run once."
         for gen_count in range(self._stop_after):
             self._B, self._D = self._eigen_decomposition()
@@ -116,13 +119,13 @@ class CMAES:
                 if not np.all(x == y):
                     repair_count += 1
 
-                value = self.objective(x)
+                value = self._objective(x)
                 self._best_value = min(value, self._best_value)
                 solutions.append((x, y, value))
             # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exactly lambda points generated"
             self._repair_history.append(repair_count)
-            self.update(solutions, repair_count)
+            self._update(solutions, repair_count)
             self._results.append((gen_count, self._best_value))
 
     def _sample_solution(self) -> np.ndarray:
@@ -134,7 +137,7 @@ class CMAES:
         D = np.sqrt(np.where(D2 < 0, _EPS, D2))
         return B, D
 
-    def update(self, solutions: List[Tuple[np.ndarray, np.ndarray, float]], repair_count: int) -> None:
+    def _update(self, solutions: List[Tuple[np.ndarray, np.ndarray, float]], repair_count: int) -> None:
         assert len(solutions) == self._lambda, "Must evaluate solutions with length equal to population size."
         for s in solutions:
             assert np.all(
@@ -173,7 +176,7 @@ class CMAES:
 
         self._xmean += self._sigma * y_w
 
-        self._mean_history.append(self.objective(self._xmean))
+        self._mean_history.append(self._objective(self._xmean))
 
         if self._visuals == True:
             title = "gen " + str(self._generation)
@@ -182,24 +185,26 @@ class CMAES:
             title += ", dim: " + str(self._dimension)
             title += ", correction: " + str(self._move_delta)
             plt.title(title)
+
             # plt.axis('equal')
+
             plt.axvline(0, linewidth=4, c='black')
             plt.axhline(0, linewidth=4, c='black')
-            plt.axvline(self._bounds[0][0], linewidth=2, c='red')
-            plt.axvline(self._bounds[0][1], linewidth=2, c='red')
-            plt.axhline(self._bounds[1][0], linewidth=2, c='red')
-            plt.axhline(self._bounds[1][1], linewidth=2, c='red')
-            x1 = [point[0] for point in population]
-            x2 = [point[1] for point in population]
+            plt.axvline(self._bounds[-1][0], linewidth=2, c='red')
+            plt.axvline(self._bounds[-2][1], linewidth=2, c='red')
+            plt.axhline(self._bounds[-1][0], linewidth=2, c='red')
+            plt.axhline(self._bounds[-2][1], linewidth=2, c='red')
+            x1 = [point[-1] for point in population]
+            x2 = [point[-2] for point in population]
             plt.scatter(x1, x2, s=50)
-            x1 = [point[0] for point in population[:self._mu]]
-            x2 = [point[1] for point in population[:self._mu]]
+            x1 = [point[-1] for point in population[:self._mu]]
+            x2 = [point[-2] for point in population[:self._mu]]
             plt.scatter(x1, x2, s=15)
-            plt.scatter(self._xmean[0], self._xmean[1], s=100, c='black')
+            plt.scatter(self._xmean[-1], self._xmean[-2], s=100, c='black')
             plt.grid()
             zoom_out = 1.3
-            max1 = zoom_out*max([abs(point[0]) for point in population])
-            max2 = zoom_out*max([abs(point[1]) for point in population])
+            max1 = zoom_out*max([abs(point[-1]) for point in population])
+            max2 = zoom_out*max([abs(point[-2]) for point in population])
             plt.xlim(-max1, max1)
             plt.ylim(-max2, max2)
             plt.pause(_DELAY)
@@ -231,7 +236,7 @@ class CMAES:
                 + self._lr_c_mu * rank_mu
         )
     
-    def objective(self, x):
+    def _objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
         if self._fitness == 'felli':
             return felli(x)
@@ -248,33 +253,27 @@ class CMAES:
         raise Exception('Invalid objective function chosen: ', str(self._fitness))
 
     def sigma_history(self) -> List[float]:
-        assert self._sigma_history != [], "Can't get sigma history, must run the algorithm first"
         return self._sigma_history
 
     def diff_history(self) -> List[float]:
-        assert self._sigma_history != [], "Can't calculate differences, must run the algorithm first"
         diffs = [1]
         for i in range(len(self._sigma_history) - 1):
             diffs.append(self._sigma_history[i+1] / self._sigma_history[i])
         return diffs
 
     def cond_history(self) -> List[float]:
-        assert self._eigen_history != [], "Can't compute condition number, must run the algorithm first"
         greatest = self._eigen_history[:,-1]
         smallest = self._eigen_history[:,0]
         result = greatest/(smallest+_EPS)
         return result
         
     def eigen_history(self) -> np.ndarray:
-        assert self._eigen_history != [], "Can't get eigenvalue history, must run the algorithm first"
         return self._eigen_history
 
     def mean_history(self) -> List[float]:
-        assert self._mean_history != [], "Can't get f(mean) history, must run the algorithm first"
         return self._mean_history
 
     def ecdf_history(self, targets: np.array) -> List[float]:
-        assert self._results != [], "Can't get ecdf values, must run the algorithm first"
         ecdf = []
         for result in self._results:
             passed = 0
@@ -285,7 +284,6 @@ class CMAES:
         return ecdf
     
     def repair_history(self) -> List[float]:
-        assert self._repair_history != [], "Can't get repair history, must run the algorithm first"
         return self._repair_history
 
     def evals_per_iteration(self) -> int:
@@ -368,7 +366,7 @@ def ackley(x: np.ndarray) -> float:
     return exp1 + exp2
 
 def _resize(vec1: np.array, vec2: np.array, const: float) -> None:
-    #returns vec1 resized to const*lenght of vec2
+    #returns vec1 rescaled to const*lenght of vec2
     vec1 = vec1 / (np.linalg.norm(vec1) + _EPS)
     scale = const * np.linalg.norm(vec2)
     vec1 *= scale
