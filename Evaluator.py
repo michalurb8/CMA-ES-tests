@@ -1,3 +1,4 @@
+from lib2to3.pgen2.literals import evalString
 from cmaes import CMAES
 from typing import List, Tuple
 import numpy as np
@@ -69,7 +70,7 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     formatted_means = _format_list(mean_list, evals_per_gen)
     formatted_repairs = _format_list(repair_list, evals_per_gen)
     formatted_eigens = _format_eigenvalues(eigens_list, evals_per_gen)
-    return (formatted_ecdfs, formatted_sigmas, formatted_diffs, formatted_eigens, formatted_conds, formatted_means, formatted_repairs)
+    return (formatted_ecdfs, formatted_sigmas, formatted_diffs, formatted_eigens, formatted_conds, formatted_means, formatted_repairs, evals_per_gen)
 
 
 def _format_list(input_list: List, evals_per_gen: int) -> Tuple:
@@ -125,7 +126,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
 
     run_params = [(False, True), (True, True)]
     for corr, v in run_params:
-        ecdf, sigma, diff, eigen, cond, mean, rep = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
+        ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
 
         ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
         sigma_plots.append((sigma[0], sigma[1], str(corr)))
@@ -135,8 +136,8 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         mean_plots.append((mean[0], mean[1], str(corr)))
         repair_plots.append((rep[0], rep[1], str(corr)))
 
-    lambda_prompt = str(lbd) if lbd is not None else "default"
-    title_str = f"dimensions: {dimensions}; population: {lambda_prompt}; generations: {stop_after}; iterations: {iterations}; method: {rmode}"; 
+    lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Metoda naprawy: {rmode}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
@@ -179,7 +180,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
     plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
 
-    plt.subplots_adjust(hspace=0.3)
+    plt.subplots_adjust(hspace=0.2)
 
     fig, axs = plt.subplots(2,1, sharex = True, sharey=True)
     plt.yscale("log")

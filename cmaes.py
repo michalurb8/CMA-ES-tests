@@ -124,7 +124,7 @@ class CMAES:
                 solutions.append((x, y, value))
             # Update algorithm parameters.
             assert len(solutions) == self._lambda, "There must be exactly lambda points generated"
-            self._repair_history.append(repair_count)
+            self._repair_history.append(repair_count / self._lambda)
             self._update(solutions, repair_count)
             self._results.append((gen_count, self._best_value))
 
