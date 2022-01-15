@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 
-_EPS = 1e-100
+_EPS = 1e-50
 _POINT_MAX = 1e100
 _SIGMA_MAX = 1e100
 
@@ -167,7 +167,7 @@ class CMAES:
             # Delta 2: difference between selected generated points mean and selected repaired points mean:
             delta2 = (np.mean(originals[:self._mu], axis=0) - np.mean(population[:self._mu], axis=0)) / (self._sigma + _EPS)
 
-            alpha = 0.5 * repair_count/self._lambda
+            alpha = 0.2 * repair_count/self._lambda
             delta1_scaled = _resize(delta1, y_w, alpha)
             delta2_scaled = _resize(delta2, y_w, alpha)
 
@@ -240,20 +240,9 @@ class CMAES:
     
     def _objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
-        return self._fitness(x)
-        if self._fitness == 'elliptic':
-            return elliptic(x)
-        elif self._fitness == 'quadratic':
-            return quadratic(x)
-        elif self._fitness == 'bent':
-            return bent_cigar(x)
-        elif self._fitness == 'rastrigin':
-            return rastrigin(x)
-        elif self._fitness == 'rosenbrock':
-            return rosenbrock(x)
-        elif self._fitness == 'ackley':
-            return ackley(x)
-        raise Exception('Invalid objective function chosen: ', str(self._fitness))
+        value = self._fitness(x)
+        assert value >= 0, 'Function values must be greater or equal 0'
+        return  value
 
     def sigma_history(self) -> List[float]:
         return self._sigma_history
