@@ -111,7 +111,7 @@ def _format_eigenvalues(eigens_list: List, evals_per_gen: int) -> Tuple:
         other_axes.append(sum[:,i])
     return x_axis, other_axes
 
-def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, corr: str, objectives: List[str]):
+def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, corr: str, rmode: str, objectives: List[str]):
     """
     run_test()) is the main function. It runs the evaluate function for all the algorithm varianst.
     All of them are plotted separately to be compared.
@@ -124,74 +124,78 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     mean_plots = []
     repair_plots = []
 
-    run_params = [None, "projection", "reflection", "resampling"]
-    for rmode in run_params:
-        ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, visual, corr)
+    ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, visual, corr)
 
-        ecdf_plots.append((ecdf[0], ecdf[1], str(rmode)))
-        sigma_plots.append((sigma[0], sigma[1], str(rmode)))
-        diff_plots.append((diff[0], diff[1], str(rmode)))
-        eigen_plots.append((eigen[0], eigen[1], str(rmode)))
-        cond_plots.append((cond[0], cond[1], str(rmode)))
-        mean_plots.append((mean[0], mean[1], str(rmode)))
-        repair_plots.append((rep[0], rep[1], str(rmode)))
+    ecdf_plots.append((ecdf[0], ecdf[1]))
+    sigma_plots.append((sigma[0], sigma[1]))
+    diff_plots.append((diff[0], diff[1]))
+    eigen_plots.append((eigen[0], eigen[1]))
+    cond_plots.append((cond[0], cond[1]))
+    mean_plots.append((mean[0], mean[1]))
+    repair_plots.append((rep[0], rep[1]))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Korekta wyłączona; Funkcja celu: {objectives[0].__name__}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Korekta: {corr}; Funkcja celu: {objectives[0].__name__}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf_plot in ecdf_plots:
-        plt.plot(ecdf_plot[0], ecdf_plot[1], label=ecdf_plot[2])
+        plt.plot(ecdf_plot[0], ecdf_plot[1])
     plt.ylabel("ECDF", rotation=45, horizontalalignment="right", verticalalignment="center")
     plt.ylim(0,1)
     
     sigma_ax = plt.subplot(512, sharex=ecdf_ax)
     plt.setp(sigma_ax.get_xticklabels(), visible = False)
     for sigma in sigma_plots:
-        plt.plot(sigma[0], sigma[1], label=sigma[2])
+        plt.plot(sigma[0], sigma[1])
     plt.yscale("log")
     plt.ylabel("Wartości sigma", rotation=45, horizontalalignment="right")
 
     diff_ax = plt.subplot(513, sharex=ecdf_ax)
     plt.setp(diff_ax.get_xticklabels(), visible = False)
     for diff in diff_plots:
-        plt.plot(diff[0], diff[1], label=diff[2])
+        plt.plot(diff[0], diff[1])
     plt.ylabel("Ilorazy kolejnych sigma", rotation=45, horizontalalignment="right")
 
     cond_ax = plt.subplot(514, sharex=ecdf_ax)
     plt.setp(cond_ax.get_xticklabels(), visible = False)
     for cond in cond_plots:
-        plt.plot(cond[0], cond[1], label=cond[2])
+        plt.plot(cond[0], cond[1])
     plt.ylabel("Wskaźnik uwarunkowania C", rotation=45, horizontalalignment="right")
 
     # mean_ax = plt.subplot(xxx, sharex=ecdf_ax) # one more plot - function value of population middle point
     # plt.setp(mean_ax.get_xticklabels(), visible = False)
     # for mean in mean_plots:
-    #     plt.plot(mean[0], mean[1], label=mean[2])
+    #     plt.plot(mean[0], mean[1])
     # plt.ylabel("f(mean)", rotation=45, horizontalalignment="right")
     # plt.yscale("log")
 
     rep_ax = plt.subplot(515, sharex=ecdf_ax)
     plt.setp(rep_ax.get_xticklabels(), fontsize = 12)
     for repair in repair_plots:
-        plt.plot(repair[0], repair[1], label=repair[2])
+        plt.plot(repair[0], repair[1])
     plt.ylim(0,1)
     plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
     plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
-    plt.legend(fontsize=12)
 
     plt.subplots_adjust(hspace=0.2)
 
-    fig, axs = plt.subplots(2,2, sharex = True, sharey=True)
+    fig, ax = plt.subplots()
     plt.yscale("log")
     fig.suptitle(title_str, fontsize=14)
     fig.subplots_adjust(hspace=0, wspace=0)
 
-    for index, eigen_plot in enumerate(eigen_plots):
-        for eigenvalue in eigen_plot[1]:
-            axs[index%2][int(index/2)].plot(eigen_plot[0], eigenvalue)
-        axs[index%2][int(index/2)].title.set_text(eigen_plot[2])
+
+    print()
+    for plot in eigen_plots:
+        for p in plot:
+            pass
+    print(eigen_plots[0][1])
+    print()
+    print()
+    eigen_plot = eigen_plots[0]
+    for eigen_values in eigen_plot[1]:
+        ax.plot(eigen_plot[0], eigen_values)
 
     plt.show()
 

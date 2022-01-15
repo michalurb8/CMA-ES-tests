@@ -26,6 +26,9 @@ parser.add_argument('-c', '--corr', default=False,
 parser.add_argument('-o', '--objective', type=str, default="elliptic",
                     help='Objective function')
 
+parser.add_argument('-r', '--repair', type=str, default=None, 
+                    help='Repair mode')
+
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.corr, [functions.Get_by_name(args.objective)])
+    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.corr, args.repair, [functions.Get_by_name(args.objective)])
