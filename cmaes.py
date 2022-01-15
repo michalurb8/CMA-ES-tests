@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Tuple
 
-_EPS = 1e-50
-_POINT_MAX = 1e50
-_SIGMA_MAX = 1e50
+_EPS = 1e-100
+_POINT_MAX = 1e100
+_SIGMA_MAX = 1e100
 
-_DELAY = 1
+_DELAY = 0.1
 
 infp = float('inf')
 infn = float('-inf')
@@ -17,7 +17,7 @@ class CMAES:
     Parameters
     ----------
     objective_function: str
-        Chosen from: quadratic, felli, bent, rastrigin, rosenbrock, ackley
+        Chosen from: quadratic, elliptic, bent, rastrigin, rosenbrock, ackley
     dimensions: int
         Objective function dimensionality.
     repair_mode: str
@@ -31,7 +31,7 @@ class CMAES:
     move_delta: bool
         If True, delta (y_w) will be change by the sum of repair vectors
     """
-    def __init__(self, objective_function: str, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False, move_delta: bool = False):
+    def __init__(self, objective_function, dimensions: int, repair_mode: str, lambda_arg: int = None, stop_after: int = 50, visuals: bool = False, move_delta: bool = False):
         assert dimensions > 0, "Number of dimensions must be greater than 0"
         self._dimension = dimensions
         self._fitness = objective_function
@@ -178,22 +178,23 @@ class CMAES:
 
         self._mean_history.append(self._objective(self._xmean))
 
-        if self._visuals == True:
-            title = "gen " + str(self._generation)
-            title += ", repair_mode: " + str(self._repair_mode)
-            title += ", lambda: " + str(self._lambda)
-            title += ", dim: " + str(self._dimension)
-            title += ", correction: " + str(self._move_delta)
+        if self._visuals == True and self._dimension > 1:
+            title = "Pokolenie " + str(self._generation)
+            title += ", Metoda naprawy: " + str(self._repair_mode)
+            title += ", Liczebność populacji: " + str(self._lambda)
+            title += ", Wymiarowość: " + str(self._dimension)
+            title += ", Korekta: " + str(self._move_delta)
             plt.title(title)
 
             # plt.axis('equal')
 
             plt.axvline(0, linewidth=4, c='black')
             plt.axhline(0, linewidth=4, c='black')
-            plt.axvline(self._bounds[-1][0], linewidth=2, c='red')
-            plt.axvline(self._bounds[-2][1], linewidth=2, c='red')
-            plt.axhline(self._bounds[-1][0], linewidth=2, c='red')
-            plt.axhline(self._bounds[-2][1], linewidth=2, c='red')
+            if self._repair_mode != None:
+                plt.axvline(self._bounds[-1][0], linewidth=2, c='red')
+                plt.axvline(self._bounds[-2][1], linewidth=2, c='red')
+                plt.axhline(self._bounds[-1][0], linewidth=2, c='red')
+                plt.axhline(self._bounds[-2][1], linewidth=2, c='red')
             x1 = [point[-1] for point in population]
             x2 = [point[-2] for point in population]
             plt.scatter(x1, x2, s=50)
@@ -221,6 +222,7 @@ class CMAES:
 
         self._sigma *= np.exp( (self._time_sigma / (self._damping + _EPS)) *
                         (np.linalg.norm(self._path_sigma) / self._chi - 1))
+
         self._sigma = min(self._sigma, _SIGMA_MAX)
 
         # Covariance matrix adaption
@@ -238,8 +240,9 @@ class CMAES:
     
     def _objective(self, x):
         assert self._dimension > 0, 'Number of dimensions must be greater than 0.'
-        if self._fitness == 'felli':
-            return felli(x)
+        return self._fitness(x)
+        if self._fitness == 'elliptic':
+            return elliptic(x)
         elif self._fitness == 'quadratic':
             return quadratic(x)
         elif self._fitness == 'bent':
@@ -340,30 +343,6 @@ class CMAES:
             if x[i] < self._bounds[i][0] or x[i] > self._bounds[i][1]:
                 return False
         return True
-
-def felli(x: np.ndarray) -> float:
-    dim = x.shape[0]
-    if dim == 1:
-        return float(np.dot(x, x))
-    arr = [np.power(1e6, p) for p in np.arange(0, dim) / (dim - 1)]
-    return float(np.matmul(arr, x ** 2))
-
-def quadratic(x: np.ndarray) -> float:
-    return float(np.dot(x, x))
-
-def bent_cigar(x: np.ndarray) -> float:
-    return x[0] ** 2 + 1e6 * np.sum(x[1:] ** 2)
-
-def rastrigin(x: np.ndarray) -> float:
-    return float(np.sum(x ** 2 + -10 * (np.cos(2 * np.pi * x)) + 10))
-
-def rosenbrock(x: np.ndarray) -> float:
-    return sum([100 * ((x[i]+1) ** 2 - (x[i + 1]+1)) ** 2 + x[i] ** 2 for i in range(x.shape[0] - 1)])
-
-def ackley(x: np.ndarray) -> float:
-    exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x))) + 20
-    exp2 = -1  * np.exp(np.sum(np.cos(2*np.pi*x)/len(x))) + np.e
-    return exp1 + exp2
 
 def _resize(vec1: np.array, vec2: np.array, const: float) -> None:
     #returns vec1 rescaled to const*lenght of vec2

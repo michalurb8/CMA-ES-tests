@@ -23,7 +23,7 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     objectives: List[str]
         List of objective functions. For each function, the algorithm will run 'iteration' times,
         then an average of all runs for all objective functions will be computed.
-        Chosen from: quadratic, felli, bent, rastrigin, rosenbrock, ackley
+        Chosen from: quadratic, elliptic, bent, rastrigin, rosenbrock, ackley
     lambda_arg : int
         Population count. Must be > 3, if set to None, default value will be computed.
     stop_after: int
@@ -45,7 +45,7 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     lambda_prompt = str(lambda_arg) if lambda_arg is not None else "default"
     print(f"dimensions: {dimensions}; iterations: {iterations}; population: {lambda_prompt}; repair: {repair_mode}; correction: {correction}")
     for objective in objectives:
-        print("    Currently running:", objective)
+        print("    Currently running:", objective.__name__)
         for iteration in range(iterations):
             stdout.write(f"\rIteration: {1+iteration} / {iterations}")
             stdout.flush()
@@ -137,7 +137,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         repair_plots.append((rep[0], rep[1], str(corr)))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Metoda naprawy: {rmode}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Metoda naprawy: {rmode}, Funkcja celu: {objectives[0].__name__}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
@@ -177,6 +177,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     plt.setp(rep_ax.get_xticklabels(), fontsize = 12)
     for repair in repair_plots:
         plt.plot(repair[0], repair[1], label=repair[2])
+    plt.ylim(0,1)
     plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
     plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
 

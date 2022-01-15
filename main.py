@@ -1,5 +1,6 @@
 import argparse
 import Evaluator
+import functions
 
 parser = argparse.ArgumentParser(prog="CMA-ES",
                                  description='This program allows you to run CMA-ES')
@@ -19,12 +20,12 @@ parser.add_argument('-s', '--stop', type=int, default=150,
 parser.add_argument('-v', '--vis', default=False,
                     help='Turn on visualisation.', action='store_true')
 
-parser.add_argument('-r', '--repair', type=str, default='projection',
+parser.add_argument('-r', '--repair', type=str, default=None,
                     help='Repair method')
 
-parser.add_argument('-o', '--objective', type=str, default="felli",
+parser.add_argument('-o', '--objective', type=str, default="elliptic",
                     help='Objective function')
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.repair, [args.objective])
+    Evaluator.run_test(args.dimensions, args.iterations, args.lbd, args.stop, args.vis, args.repair, [functions.Get_by_name(args.objective)])
