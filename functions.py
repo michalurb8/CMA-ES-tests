@@ -18,7 +18,7 @@ def rastrigin(x: np.ndarray) -> float:
     return float(np.sum(x ** 2 + -10 * (np.cos(2 * np.pi * x)) + 10))
 
 def rosenbrock(x: np.ndarray) -> float:
-    return sum([100 * ((x[i]+1) ** 2 - (x[i + 1]+1)) ** 2 + x[i] ** 2 for i in range(x.shape[0] - 1)])
+    return sum([x[i]**2 + 100*(x[i+1] - x[i]**2 - 2*x[i])**2 for i in range(x.shape[0] - 1)])
 
 def ackley(x: np.ndarray) -> float:
     exp1 = -20 * np.exp(-0.2*np.sqrt(np.sum(x**2)/len(x))) + 20
