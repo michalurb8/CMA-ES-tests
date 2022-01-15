@@ -111,7 +111,7 @@ def _format_eigenvalues(eigens_list: List, evals_per_gen: int) -> Tuple:
         other_axes.append(sum[:,i])
     return x_axis, other_axes
 
-def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, rmode: str, objectives: List[str]):
+def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual: bool, corr: str, objectives: List[str]):
     """
     run_test()) is the main function. It runs the evaluate function for all the algorithm varianst.
     All of them are plotted separately to be compared.
@@ -124,26 +124,25 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     mean_plots = []
     repair_plots = []
 
-    run_params = [(False, True), (True, True)]
-    for corr, v in run_params:
-        ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
+    run_params = [None, "projection", "reflection", "resampling"]
+    for rmode in run_params:
+        ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, visual, corr)
 
-        ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
-        sigma_plots.append((sigma[0], sigma[1], str(corr)))
-        diff_plots.append((diff[0], diff[1], str(corr)))
-        eigen_plots.append((eigen[0], eigen[1], str(corr)))
-        cond_plots.append((cond[0], cond[1], str(corr)))
-        mean_plots.append((mean[0], mean[1], str(corr)))
-        repair_plots.append((rep[0], rep[1], str(corr)))
+        ecdf_plots.append((ecdf[0], ecdf[1], str(rmode)))
+        sigma_plots.append((sigma[0], sigma[1], str(rmode)))
+        diff_plots.append((diff[0], diff[1], str(rmode)))
+        eigen_plots.append((eigen[0], eigen[1], str(rmode)))
+        cond_plots.append((cond[0], cond[1], str(rmode)))
+        mean_plots.append((mean[0], mean[1], str(rmode)))
+        repair_plots.append((rep[0], rep[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Metoda naprawy: {rmode}, Funkcja celu: {objectives[0].__name__}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Korekta wyłączona; Funkcja celu: {objectives[0].__name__}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf_plot in ecdf_plots:
         plt.plot(ecdf_plot[0], ecdf_plot[1], label=ecdf_plot[2])
-    plt.legend(fontsize=12)
     plt.ylabel("ECDF", rotation=45, horizontalalignment="right", verticalalignment="center")
     plt.ylim(0,1)
     
@@ -180,18 +179,19 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     plt.ylim(0,1)
     plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
     plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
+    plt.legend(fontsize=12)
 
     plt.subplots_adjust(hspace=0.2)
 
-    fig, axs = plt.subplots(2,1, sharex = True, sharey=True)
+    fig, axs = plt.subplots(2,2, sharex = True, sharey=True)
     plt.yscale("log")
     fig.suptitle(title_str, fontsize=14)
     fig.subplots_adjust(hspace=0, wspace=0)
 
     for index, eigen_plot in enumerate(eigen_plots):
         for eigenvalue in eigen_plot[1]:
-            axs[index%2].plot(eigen_plot[0], eigenvalue)
-        axs[index%2].title.set_text(eigen_plot[2])
+            axs[index%2][int(index/2)].plot(eigen_plot[0], eigenvalue)
+        axs[index%2][int(index/2)].title.set_text(eigen_plot[2])
 
     plt.show()
 
