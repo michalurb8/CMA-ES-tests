@@ -186,13 +186,9 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     fig.subplots_adjust(hspace=0, wspace=0)
 
 
-    print()
     for plot in eigen_plots:
         for p in plot:
             pass
-    print(eigen_plots[0][1])
-    print()
-    print()
     eigen_plot = eigen_plots[0]
     for eigen_values in eigen_plot[1]:
         ax.plot(eigen_plot[0], eigen_values)
