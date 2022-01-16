@@ -6,7 +6,7 @@ _EPS = 1e-50
 _POINT_MAX = 1e100
 _SIGMA_MAX = 1e100
 
-_DELAY = 0.1
+_DELAY = 1
 
 infp = float('inf')
 infn = float('-inf')
