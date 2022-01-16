@@ -119,7 +119,7 @@ class CMAES:
                 if not np.all(x == y):
                     repair_count += 1
 
-                value = self._objective(x)
+                value = self._objective(y)
                 self._best_value = min(value, self._best_value)
                 solutions.append((x, y, value))
             # Update algorithm parameters.
