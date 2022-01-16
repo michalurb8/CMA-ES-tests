@@ -6,7 +6,7 @@ _EPS = 1e-50
 _POINT_MAX = 1e100
 _SIGMA_MAX = 1e100
 
-_DELAY = 0.1
+_DELAY = 1
 
 infp = float('inf')
 infn = float('-inf')
@@ -167,7 +167,7 @@ class CMAES:
             # Delta 2: difference between selected generated points mean and selected repaired points mean:
             delta2 = (np.mean(originals[:self._mu], axis=0) - np.mean(population[:self._mu], axis=0)) / (self._sigma + _EPS)
 
-            alpha = 0.2 * repair_count/self._lambda
+            alpha = 0.5 * repair_count/self._lambda
             delta1_scaled = _resize(delta1, y_w, alpha)
             delta2_scaled = _resize(delta2, y_w, alpha)
 

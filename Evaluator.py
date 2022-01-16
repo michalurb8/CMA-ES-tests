@@ -137,7 +137,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         repair_plots.append((rep[0], rep[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Korekta wyłączona; Funkcja celu: {objectives[0].__name__}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Korekta: {corr}; Funkcja celu: {objectives[0].__name__}"; 
     ecdf_ax = plt.subplot(511)
     plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
