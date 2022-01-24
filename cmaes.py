@@ -109,7 +109,7 @@ class CMAES:
             self._B, self._D = self._eigen_decomposition()
 
             self._sigma_history.append(self._sigma)
-            self._eigen_history[self._generation, :] = np.multiply(self._D, np.ones(self._dimension))
+            self._eigen_history[self._generation, :] = np.multiply(self._D, np.ones(self._dimension))**2
 
             solutions = [] # this is a list of tuples (x, y , value)
             repair_count = 0
