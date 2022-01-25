@@ -124,7 +124,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     mean_plots = []
     repair_plots = []
 
-    run_params = [(False, True), (True, True)]
+    run_params = [(False, False), (True, True)]
     for corr, v in run_params:
         ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
 
