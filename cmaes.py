@@ -179,11 +179,16 @@ class CMAES:
         self._mean_history.append(self._objective(self._xmean))
 
         if self._visuals == True and self._dimension > 1:
-            title = "Pokolenie " + str(self._generation)
-            title += ", Metoda naprawy: " + str(self._repair_mode)
-            title += ", Liczebność populacji: " + str(self._lambda)
-            title += ", Wymiarowość: " + str(self._dimension)
-            title += ", Korekta: " + str(self._move_delta)
+            title = "Iteracja " + str(self._generation) + ", \n"
+            # title += ", Metoda naprawy: " + str(self._repair_mode)
+            title += "Liczebność populacji: " + str(self._lambda) + ", \n"
+            title += "Wymiarowość: " + str(self._dimension) + ", \n"
+            # title += ", Korekta: " + str(self._move_delta)
+            title += "Funkcja celu: " + str(self._fitness.__name__)
+            plt.rcParams["figure.figsize"] = (8,9)
+            plt.rcParams['font.size'] = '22'
+            plt.tight_layout()
+            plt.subplots_adjust(top = 0.8, bottom = 0.1, left = 0.1, right = 0.99)
             plt.title(title)
 
             # plt.axis('equal')
