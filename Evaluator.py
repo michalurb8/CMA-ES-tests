@@ -47,7 +47,7 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     for objective in objectives:
         print("    Currently running:", objective.__name__)
         for iteration in range(iterations):
-            stdout.write(f"\rIteration: {1+iteration} / {iterations}")
+            stdout.write(f"\rRun# {1+iteration} / {iterations}")
             stdout.flush()
             algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual, correction) # algorithm runs here
             if evals_per_gen == None:
@@ -134,10 +134,11 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     mean_plots.append((mean[0], mean[1]))
     repair_plots.append((rep[0], rep[1]))
 
+    plt.rcParams['font.size'] = '18'
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations};\nKorekta: {corr}; Funkcja celu: {objectives[0].__name__}; Metoda naprawy: {rmode}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt};\nLiczba iteracji: {stop_after}; Liczba przebiegów: {iterations}; Korekta: {corr};\nFunkcja celu: {objectives[0].__name__}; Metoda naprawy: {rmode}"; 
     ecdf_ax = plt.subplot(511)
-    plt.title(title_str, fontsize=14)
+    plt.title(title_str, fontsize=22)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf_plot in ecdf_plots:
         plt.plot(ecdf_plot[0], ecdf_plot[1])
@@ -171,18 +172,18 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     # plt.yscale("log")
 
     rep_ax = plt.subplot(515, sharex=ecdf_ax)
-    plt.setp(rep_ax.get_xticklabels(), fontsize = 12)
+    plt.setp(rep_ax.get_xticklabels())
     for repair in repair_plots:
         plt.plot(repair[0], repair[1])
     plt.ylim(0,1)
     plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
-    plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
+    plt.xlabel("Liczba obliczeń funkcji celu") 
 
     plt.subplots_adjust(hspace=0.2)
 
     fig, ax = plt.subplots()
     plt.yscale("log")
-    fig.suptitle(title_str, fontsize=14)
+    fig.suptitle(title_str)
     fig.subplots_adjust(hspace=0, wspace=0)
 
 
