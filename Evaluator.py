@@ -47,7 +47,7 @@ def evaluate(repair_mode: str, dimensions: int, iterations: int, objectives: Lis
     for objective in objectives:
         print("    Currently running:", objective.__name__)
         for iteration in range(iterations):
-            stdout.write(f"\rIteration: {1+iteration} / {iterations}")
+            stdout.write(f"\rRun# {1+iteration} / {iterations}")
             stdout.flush()
             algo = CMAES(objective, dimensions, repair_mode, lambda_arg, stop_after, visual, correction) # algorithm runs here
             if evals_per_gen == None:
@@ -137,13 +137,14 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         repair_plots.append((rep[0], rep[1], str(rmode)))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt}; Liczba pokoleń: {stop_after}; Liczba iteracji: {iterations}; Korekta: {corr}; Funkcja celu: {objectives[0].__name__}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt};\nLiczba iteracji: {stop_after}; Liczba przebiegów: {iterations}; Korekta: {corr};\nFunkcja celu: {objectives[0].__name__}"; 
+    plt.rcParams['font.size'] = '18'
     ecdf_ax = plt.subplot(511)
-    plt.title(title_str, fontsize=14)
     plt.setp(ecdf_ax.get_xticklabels(), visible = False)
     for ecdf_plot in ecdf_plots:
         plt.plot(ecdf_plot[0], ecdf_plot[1], label=ecdf_plot[2])
-    plt.ylabel("ECDF", rotation=45, horizontalalignment="right", verticalalignment="center")
+    plt.title(title_str, fontsize=22)
+    plt.ylabel("ECDF", rotation=45, horizontalalignment="right")
     plt.ylim(0,1)
     
     sigma_ax = plt.subplot(512, sharex=ecdf_ax)
@@ -173,19 +174,18 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     # plt.yscale("log")
 
     rep_ax = plt.subplot(515, sharex=ecdf_ax)
-    plt.setp(rep_ax.get_xticklabels(), fontsize = 12)
     for repair in repair_plots:
         plt.plot(repair[0], repair[1], label=repair[2])
     plt.ylim(0,1)
     plt.ylabel("% naprawianych punktów", rotation=45, horizontalalignment="right")
-    plt.xlabel("Liczba obliczeń funkcji celu", fontsize=12)
-    plt.legend(fontsize=12)
+    plt.xlabel("Liczba obliczeń funkcji celu")
+    plt.legend()
 
     plt.subplots_adjust(hspace=0.2)
 
     fig, axs = plt.subplots(2,2, sharex = True, sharey=True)
     plt.yscale("log")
-    fig.suptitle(title_str, fontsize=14)
+    fig.suptitle(title_str)
     fig.subplots_adjust(hspace=0, wspace=0)
 
     for index, eigen_plot in enumerate(eigen_plots):
