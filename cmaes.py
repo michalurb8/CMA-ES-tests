@@ -174,9 +174,9 @@ class CMAES:
             correction = delta2_scaled
             y_w += correction
 
-        self._xmean += self._sigma * y_w
-
         self._mean_history.append(self._objective(self._xmean))
+
+        self._xmean += self._sigma * y_w
 
         if self._visuals == True and self._dimension > 1:
             title = "Iteracja " + str(self._generation) + ", \n"
