@@ -137,7 +137,7 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
         repair_plots.append((rep[0], rep[1], str(corr)))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
-    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt};\nLiczba iteracji: {stop_after}; Liczba przebiegów: {iterations}; Metoda naprawy: {rmode};\nFunkcja celu: {objectives[0].__name__}"; 
+    title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt};\nLiczba iteracji: {stop_after}; Liczba przebiegów: {iterations};\nMetoda naprawy: {rmode}; Funkcja celu: {objectives[0].__name__}"; 
     plt.rcParams['font.size'] = '18'
     ecdf_ax = plt.subplot(511)
     plt.title(title_str)
