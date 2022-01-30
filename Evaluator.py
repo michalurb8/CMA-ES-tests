@@ -128,13 +128,14 @@ def run_test(dimensions: int, iterations: int, lbd: int, stop_after: int, visual
     for corr, v in run_params:
         ecdf, sigma, diff, eigen, cond, mean, rep, lambda_val = evaluate(rmode, dimensions, iterations, objectives, lbd, stop_after, v and visual, corr)
 
-        ecdf_plots.append((ecdf[0], ecdf[1], str(corr)))
-        sigma_plots.append((sigma[0], sigma[1], str(corr)))
-        diff_plots.append((diff[0], diff[1], str(corr)))
-        eigen_plots.append((eigen[0], eigen[1], str(corr)))
-        cond_plots.append((cond[0], cond[1], str(corr)))
-        mean_plots.append((mean[0], mean[1], str(corr)))
-        repair_plots.append((rep[0], rep[1], str(corr)))
+        legend = "Korekta włączona" if corr else "Korekta wyłączona"
+        ecdf_plots.append((ecdf[0], ecdf[1], legend))
+        sigma_plots.append((sigma[0], sigma[1], legend))
+        diff_plots.append((diff[0], diff[1], legend))
+        eigen_plots.append((eigen[0], eigen[1], legend))
+        cond_plots.append((cond[0], cond[1], legend))
+        mean_plots.append((mean[0], mean[1], legend))
+        repair_plots.append((rep[0], rep[1], legend))
 
     lambda_prompt = str(lbd) if lbd is not None else "Domyślnie 4n=" + str(lambda_val)
     title_str = f"Wymiarowość: {dimensions}; Liczebność populacji: {lambda_prompt};\nLiczba iteracji: {stop_after}; Liczba przebiegów: {iterations};\nMetoda naprawy: {rmode}; Funkcja celu: {objectives[0].__name__}"; 
